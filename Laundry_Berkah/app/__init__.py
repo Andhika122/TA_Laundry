@@ -249,6 +249,7 @@ def register_error_handlers(app):
     @app.errorhandler(500)
     def internal_error(error):
         db.session.rollback()
+        app.logger.exception('Unhandled server error')
         return {'error': 'Internal Server Error', 'message': 'An error occurred'}, 500
     
     @app.errorhandler(403)
@@ -283,6 +284,8 @@ def setup_logging(app):
         except OSError:
             # If the filesystem is read-only or not writable, skip file logging.
             pass
+        app.logger.setLevel(logging.INFO)
+        app.logger.info('Laundry Berkah startup')
         
         # Set logging format
         file_handler.setFormatter(logging.Formatter(

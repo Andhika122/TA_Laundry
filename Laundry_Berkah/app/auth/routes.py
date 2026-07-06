@@ -55,8 +55,13 @@ def login():
         if username == current_app.config.get('ADMIN_USERNAME', 'admin'):
             _ensure_login_defaults()
 
-        # Find user
-        user = User.query.filter_by(username=username).first()
+        try:
+            # Find user
+            user = User.query.filter_by(username=username).first()
+        except Exception as exc:
+            current_app.logger.exception('Login query failed')
+            flash('Terjadi kesalahan saat memproses login. Silakan coba lagi nanti.', 'danger')
+            return redirect(url_for('auth.login'))
         
         if user and user.check_password(password) and getattr(user, 'status', True):
             # Set session

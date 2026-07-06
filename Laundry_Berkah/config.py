@@ -42,9 +42,18 @@ def build_tidb_uri(user, password, host, port, database):
     return f"mysql+pymysql://{encoded_user}:{encoded_password}@{host}:{port}/{database}"
 
 
+def normalize_database_url(database_url):
+    """Normalize database URLs to a supported SQLAlchemy format."""
+    if not database_url:
+        return database_url
+    if database_url.startswith('mysql://') and not database_url.startswith('mysql+pymysql://'):
+        return database_url.replace('mysql://', 'mysql+pymysql://', 1)
+    return database_url
+
+
 def get_database_uri():
     """Resolve the SQLAlchemy database URI from the current environment."""
-    database_url = os.getenv('DATABASE_URL')
+    database_url = normalize_database_url(os.getenv('DATABASE_URL', '').strip())
     if database_url:
         return database_url
     if is_testing_environment():
@@ -52,12 +61,20 @@ def get_database_uri():
     if should_use_sqlite_fallback():
         return get_sqlite_uri()
 
+    host = os.getenv('TIDB_HOST')
+    user = os.getenv('TIDB_USER')
+    database = os.getenv('TIDB_DB')
+    if not host or not user or not database:
+        raise RuntimeError(
+            'Production deployment requires DATABASE_URL or TIDB_HOST, TIDB_USER, and TIDB_DB environment variables.'
+        )
+
     return build_tidb_uri(
-        os.getenv('TIDB_USER', 'root'),
+        user,
         os.getenv('TIDB_PASSWORD', ''),
-        os.getenv('TIDB_HOST', 'localhost'),
+        host,
         os.getenv('TIDB_PORT', '4000'),
-        os.getenv('TIDB_DB', 'db_laundry'),
+        database,
     )
 
 
@@ -129,7 +146,11 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = get_engine_options(SQLALCHEMY_DATABASE_URI)
     
     # Upload Files
-    UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'app/static/uploads')
+    UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER') or (
+        os.path.join(os.path.dirname(__file__), 'app/static/uploads')
+        if FLASK_ENV != 'production' and not os.getenv('VERCEL')
+        else '/tmp/uploads'
+    )
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
     

@@ -6,8 +6,9 @@ from dotenv import load_dotenv
 # Project root is parent of this file
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP_FOLDER = os.path.join(PROJECT_ROOT, 'Laundry_Berkah')
-if APP_FOLDER not in sys.path:
-    sys.path.insert(0, APP_FOLDER)
+for path in [PROJECT_ROOT, APP_FOLDER]:
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 # Load environment variables
 load_dotenv(os.path.join(PROJECT_ROOT, '.env'))
@@ -45,3 +46,5 @@ if app is None:
             body += 'Error: ' + repr(_init_exc) + '\n'
         start_response('500 Internal Server Error', [('Content-Type', 'text/plain')])
         return [body.encode('utf-8')]
+
+application = app

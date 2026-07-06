@@ -2,14 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "Laundry_Berkah/app.py",
+      "src": "entrypoint.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "Laundry_Berkah/app.py"
+      "dest": "entrypoint.py"
     }
   ]
 }

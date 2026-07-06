@@ -7,6 +7,11 @@ import sys
 from dotenv import load_dotenv
 from urllib.parse import urlparse
 
+# Ensure the current package directory is on the import path.
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+if APP_DIR not in sys.path:
+    sys.path.insert(0, APP_DIR)
+
 # Load environment variables
 load_dotenv()
 

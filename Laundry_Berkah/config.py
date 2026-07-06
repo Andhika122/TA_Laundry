@@ -49,9 +49,17 @@ def get_database_uri():
         return database_url
     if is_testing_environment():
         return 'sqlite:///:memory:'
-    if os.getenv('FLASK_ENV', 'development').lower() != 'production':
-        return get_sqlite_uri()
     if should_use_sqlite_fallback():
+        return get_sqlite_uri()
+    if os.getenv('TIDB_DB'):
+        return build_tidb_uri(
+            os.getenv('TIDB_USER', 'root'),
+            os.getenv('TIDB_PASSWORD', ''),
+            os.getenv('TIDB_HOST', 'localhost'),
+            os.getenv('TIDB_PORT', '4000'),
+            os.getenv('TIDB_DB', 'db_laundry'),
+        )
+    if os.getenv('FLASK_ENV', 'development').lower() != 'production':
         return get_sqlite_uri()
 
     return build_tidb_uri(
@@ -75,6 +83,16 @@ def get_engine_options(database_uri=None):
             'echo': env_flag('SQLALCHEMY_ECHO'),
         }
         ssl_ca = os.getenv('TIDB_SSL_CA')
+        ssl_ca_content = os.getenv('TIDB_SSL_CA_CONTENT')
+        if ssl_ca_content:
+            import tempfile
+
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pem')
+            temp_file.write(ssl_ca_content.encode('utf-8'))
+            temp_file.flush()
+            temp_file.close()
+            ssl_ca = temp_file.name
+
         if ssl_ca:
             options['connect_args'] = {'ssl_ca': ssl_ca}
     else:

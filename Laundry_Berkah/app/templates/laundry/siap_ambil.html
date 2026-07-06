@@ -1,0 +1,128 @@
+{% extends 'layout/base.html' %}
+{% set active_page = 'laundry' %}
+{% block title %}Siap Ambil - Laundry Berkah{% endblock %}
+{% block page_title %}<i class="fas fa-truck"></i> Siap Ambil{% endblock %}
+
+{% block content %}
+<div class="status-summary">
+    <div class="status-card antrian">
+        <div class="value">{{ status_counts.get('Antrian', 0) }}</div>
+        <div class="label"><i class="fas fa-hourglass-start"></i> Antrian</div>
+    </div>
+    <div class="status-card cuci">
+        <div class="value">{{ status_counts.get('Cuci', 0) }}</div>
+        <div class="label"><i class="fas fa-water"></i> Cuci</div>
+    </div>
+    <div class="status-card pengeringan">
+        <div class="value">{{ status_counts.get('Pengeringan', 0) }}</div>
+        <div class="label"><i class="fas fa-wind"></i> Pengeringan</div>
+    </div>
+    <div class="status-card setrika">
+        <div class="value">{{ status_counts.get('Setrika', 0) }}</div>
+        <div class="label"><i class="fas fa-fire"></i> Setrika</div>
+    </div>
+    <div class="status-card packing">
+        <div class="value">{{ status_counts.get('Packing', 0) }}</div>
+        <div class="label"><i class="fas fa-box"></i> Packing</div>
+    </div>
+    <div class="status-card siapambil">
+        <div class="value">{{ status_counts.get('Siap Ambil', 0) }}</div>
+        <div class="label"><i class="fas fa-check-circle"></i> Siap Ambil</div>
+    </div>
+    <div class="status-card selesai">
+        <div class="value">{{ status_counts.get('Selesai', 0) }}</div>
+        <div class="label"><i class="fas fa-check-double"></i> Selesai</div>
+    </div>
+</div>
+<div class="nav-links">
+    <a href="{{ url_for('laundry.antrian', search=search_keyword) if search_keyword else url_for('laundry.antrian') }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-hourglass-start"></i> Antrian</a>
+    <a href="{{ url_for('laundry.proses', search=search_keyword) if search_keyword else url_for('laundry.proses') }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-cogs"></i> Proses</a>
+    <a href="{{ url_for('laundry.siap_ambil', search=search_keyword) if search_keyword else url_for('laundry.siap_ambil') }}" class="btn btn-primary btn-sm"><i class="fas fa-truck"></i> Siap Ambil</a>
+    <a href="{{ url_for('laundry.selesai', search=search_keyword) if search_keyword else url_for('laundry.selesai') }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-check-circle"></i> Selesai</a>
+</div>
+
+<div class="search-section" style="margin-bottom: 24px;">
+    <form method="GET" action="{{ url_for('laundry.siap_ambil') }}" class="search-form">
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <div style="flex: 1; position: relative;">
+                <i class="fas fa-search" style="position: absolute; left: 12px; top: 12px; color: #94a3b8; font-size: 14px;"></i>
+                <input type="text" name="search" class="form-control" placeholder="Cari berdasarkan nama pelanggan atau nomor HP..." 
+                       value="{{ search_keyword }}" style="padding-left: 36px;">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Cari</button>
+            {% if search_keyword %}
+            <a href="{{ url_for('laundry.siap_ambil') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-times"></i> Reset</a>
+            {% endif %}
+        </div>
+    </form>
+    {% if search_keyword %}
+    <div style="margin-top: 12px; font-size: 13px; color: #64748b;">
+        Hasil pencarian untuk: <strong>{{ search_keyword }}</strong> ({{ transaksi_list|length }} transaksi ditemukan)
+    </div>
+    {% endif %}
+</div>
+
+<div class="section-card">
+    <h2><i class="fas fa-check-double"></i> Transaksi Siap Diambil</h2>
+    
+    <!-- Notifikasi untuk transaksi belum bayar -->
+    {% set belum_bayar = [] %}
+    {% for transaksi in transaksi_list %}
+        {% if payment_status_map[transaksi.id_transaksi] and payment_status_map[transaksi.id_transaksi].status != 'Lunas' %}
+            {% if belum_bayar.append(transaksi) %}{% endif %}
+        {% endif %}
+    {% endfor %}
+    
+    {% if belum_bayar %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle"></i> <strong>⚠️ Perhatian!</strong> Ada {{ belum_bayar|length }} transaksi siap ambil yang belum dibayar. Pastikan pelanggan melakukan pembayaran terlebih dahulu sebelum transaksi diselesaikan.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+    
+    {% if transaksi_list %}
+    <div class="transaction-list">
+        {% for transaksi in transaksi_list %}
+        {% set status_bayar = payment_status_map[transaksi.id_transaksi] %}
+        {% set is_belum_bayar = status_bayar and status_bayar.status != 'Lunas' %}
+        <div class="transaction-card {% if is_belum_bayar %}unpaid-warning{% endif %}">
+            <div class="top">
+                <div class="title">{{ transaksi.nomor_transaksi }}</div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    {% if is_belum_bayar %}
+                    <span style="background: #DC2626; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                        <i class="fas fa-circle-exclamation"></i> BELUM BAYAR
+                    </span>
+                    {% endif %}
+                    <div class="badge badge-{{ transaksi.status_proses }}">{{ transaksi.status_proses }}</div>
+                </div>
+            </div>
+            <div class="detail">
+                <div class="detail-row"><strong>👤 Pelanggan</strong><span>{{ transaksi.pelanggan.nama if transaksi.pelanggan else '-' }}</span></div>
+                <div class="detail-row"><strong>⏰ Est. Selesai</strong><span>{{ transaksi.tanggal_selesai_estimasi.strftime('%d/%m/%Y %H:%M') if transaksi.tanggal_selesai_estimasi else '-' }}</span></div>
+                <div class="detail-row"><strong>💳 Status Bayar</strong><span>
+                    {% if is_belum_bayar %}
+                        <strong style="color: #DC2626;"><i class="fas fa-times-circle"></i> {{ status_bayar.status if status_bayar else 'Belum Bayar' }}</strong>
+                    {% else %}
+                        <span style="color: #16A34A;"><i class="fas fa-check-circle"></i> {{ status_bayar.status if status_bayar else 'Belum Bayar' }}</span>
+                    {% endif %}
+                </span></div>
+                <div class="detail-row"><strong>💰 Total</strong><span>Rp {{ '{:,.0f}'.format(transaksi.total_harga).replace(',', '.') }}</span></div>
+            </div>
+            <div class="actions">
+                <a href="{{ url_for('transaksi.detail', id_transaksi=transaksi.id_transaksi) }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-eye"></i> Detail</a>
+                <button type="button" class="btn btn-primary btn-sm" onclick="advanceLaundryStatus({{ transaksi.id_transaksi }}, this)">
+                    <i class="fas fa-arrow-right"></i> Proses
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-shopping-bag"></i>
+        <p>Tidak ada transaksi siap ambil saat ini.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

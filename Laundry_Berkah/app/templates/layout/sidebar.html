@@ -1,0 +1,25 @@
+<nav class="nav flex-column pt-3">
+    <a href="{{ url_for('dashboard.dashboard') }}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+        <i class="fas fa-chart-line"></i> Dashboard
+    </a>
+    {% if session.get('role') != 'Kasir' %}
+    <a href="{{ url_for('pelanggan.index') }}" class="nav-link {% if active_page == 'pelanggan' %}active{% endif %}">
+        <i class="fas fa-users"></i> Pelanggan
+    </a>
+    <a href="{{ url_for('layanan.index') }}" class="nav-link {% if active_page == 'layanan' %}active{% endif %}">
+        <i class="fas fa-cogs"></i> Layanan
+    </a>
+    {% endif %}
+    <a href="{{ url_for('transaksi.index') }}" class="nav-link {% if active_page == 'transaksi' %}active{% endif %}">
+        <i class="fas fa-receipt"></i> Transaksi
+    </a>
+    <a href="{{ url_for('laundry.antrian') }}" class="nav-link {% if active_page == 'laundry' %}active{% endif %}">
+        <i class="fas fa-tasks"></i> Proses Laundry
+    </a>
+    <a href="{{ url_for('laporan.index') }}" class="nav-link {% if active_page == 'laporan' %}active{% endif %}">
+        <i class="fas fa-chart-bar"></i> Laporan
+    </a>
+    <a href="{{ url_for('akun.profile') }}" class="nav-link {% if active_page == 'akun' %}active{% endif %}">
+        <i class="fas fa-user-circle"></i> Akun
+    </a>
+</nav>

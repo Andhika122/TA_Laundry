@@ -1,0 +1,154 @@
+{% extends 'layout/base.html' %}
+{% set active_page = 'transaksi' %}
+{% block title %}Riwayat Pembayaran - Laundry Berkah{% endblock %}
+{% block page_title %}<i class="fas fa-history"></i> Riwayat Pembayaran{% endblock %}
+{% block styles %}
+<style>
+.table { font-size: 14px; margin-bottom: 0; }
+.table thead th { border-bottom: 2px solid #e2e8f0; font-weight: 600; color: #475569; padding: 12px; }
+.table tbody td { padding: 12px; color: #475569; }
+.badge-status { padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: #ffffff; display:inline-flex; align-items:center; justify-content:center; }
+.badge-lunas { background: var(--success); }
+.badge-sebagian { background: #F59E0B; }
+.badge-belum { background: var(--danger); }
+.empty-state { text-align: center; padding: 40px; color: var(--gray); }
+.empty-state-icon { font-size: 48px; margin-bottom: 15px; opacity: 0.5; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> Data Transaksi
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label" style="color: var(--gray); font-size: 12px;">Nomor Transaksi</label>
+                        <div style="font-weight: 700; font-size: 16px;">{{ transaksi.nomor_transaksi }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" style="color: var(--gray); font-size: 12px;">Pelanggan</label>
+                        <div style="font-weight: 700; font-size: 16px;">{{ transaksi.pelanggan.nama }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" style="color: var(--gray); font-size: 12px;">Total Transaksi</label>
+                        <div style="font-weight: 700; font-size: 16px; color: var(--primary);">Rp {{ "{:,.0f}".format(transaksi.total_harga) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-history"></i> Daftar Pembayaran
+            </div>
+            <div class="card-body">
+                {% if payment_history %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Tanggal Pembayaran</th>
+                                <th>Metode</th>
+                                <th>Jumlah</th>
+                                <th>Status</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in payment_history %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ p.tanggal.strftime('%d %b %Y %H:%M') }}</td>
+                                <td>
+                                    {% if p.metode_pembayaran == 'Cash' %}
+                                    <i class="fas fa-coins"></i> Cash
+                                    {% elif p.metode_pembayaran == 'Transfer' %}
+                                    <i class="fas fa-bank"></i> Transfer
+                                    {% else %}
+                                    <i class="fas fa-qrcode"></i> QRIS
+                                    {% endif %}
+                                </td>
+                                <td><strong>Rp {{ "{:,.0f}".format(p.jumlah) }}</strong></td>
+                                <td>
+                                    {% if p.status == 'Lunas' %}
+                                    <span class="badge-status badge-lunas">✓ Lunas</span>
+                                    {% elif p.status == 'Sebagian' %}
+                                    <span class="badge-status badge-sebagian">⊕ Sebagian</span>
+                                    {% else %}
+                                    <span class="badge-status badge-belum">✗ Belum</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if p.metode_pembayaran == 'Cash' or p.metode_pembayaran == 'QRIS' %}
+                                    <a href="{{ url_for('pembayaran.struk', id_pembayaran=p.id_pembayaran) }}" class="btn btn-sm btn-outline-primary" title="Print">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <p>Belum ada pembayaran</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-calculator"></i> Ringkasan
+            </div>
+            <div class="card-body">
+                <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
+                    <small style="color: var(--gray); text-transform: uppercase; font-weight: 600;">Total Transaksi</small>
+                    <div style="font-size: 20px; font-weight: 700; color: #1e293b; margin-top: 5px;">Rp {{ "{:,.0f}".format(status_pembayaran.total_harga) }}</div>
+                </div>
+                <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
+                    <small style="color: var(--gray); text-transform: uppercase; font-weight: 600;">Sudah Dibayar</small>
+                    <div style="font-size: 20px; font-weight: 700; color: var(--success); margin-top: 5px;">Rp {{ "{:,.0f}".format(status_pembayaran.total_paid) }}</div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <small style="color: var(--gray); text-transform: uppercase; font-weight: 600;">Sisa Pembayaran</small>
+                    <div style="font-size: 20px; font-weight: 700; color: var(--danger); margin-top: 5px;">Rp {{ "{:,.0f}".format(status_pembayaran.remaining) }}</div>
+                </div>
+                <hr>
+                <div style="padding: 15px; background: #f0f9ff; border-radius: 8px; border-left: 3px solid var(--primary);">
+                    <small style="color: var(--gray); text-transform: uppercase; font-weight: 600;">Status Pembayaran</small>
+                    {% if status_pembayaran.status == 'Lunas' %}
+                    <div style="font-size: 16px; font-weight: 700; color: var(--success); margin-top: 5px;">✓ LUNAS</div>
+                    {% elif status_pembayaran.status == 'Sebagian' %}
+                    <div style="font-size: 16px; font-weight: 700; color: #B45309; margin-top: 5px;">⊕ SEBAGIAN</div>
+                    {% else %}
+                    <div style="font-size: 16px; font-weight: 700; color: var(--danger); margin-top: 5px;">✗ BELUM LUNAS</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% if status_pembayaran.remaining > 0 %}
+        <div class="card">
+            <div class="card-body text-center">
+                <a href="{{ url_for('pembayaran.bayar', id_transaksi=transaksi.id_transaksi) }}" class="btn btn-primary w-100">
+                    <i class="fas fa-plus-circle"></i> Tambah Pembayaran
+                </a>
+            </div>
+        </div>
+        {% endif %}
+        <div class="card">
+            <div class="card-body text-center">
+                <a href="{{ url_for('transaksi.detail', id_transaksi=transaksi.id_transaksi) }}" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-arrow-left"></i> Kembali ke Transaksi
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

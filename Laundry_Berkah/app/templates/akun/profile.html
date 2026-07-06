@@ -1,0 +1,81 @@
+{% extends 'layout/base.html' %}
+{% set active_page = 'akun' %}
+{% block title %}Profile - Laundry Berkah{% endblock %}
+{% block page_title %}👤 Profil Pengguna{% endblock %}
+{% block content %}
+    <div class="card">
+        <div class="card-header">
+            Informasi Akun
+        </div>
+        <div class="card-body">
+            <div class="profile-meta">
+                <div class="profile-item">
+                    <h4>Username</h4>
+                    <p>{{ session.get('username') or 'N/A' }}</p>
+                </div>
+                <div class="profile-item">
+                    <h4>Peran</h4>
+                    <p>{{ session.get('role', 'Admin') }}</p>
+                </div>
+                <div class="profile-item">
+                    <h4>Email</h4>
+                    <p>{{ session.get('email', 'user@example.com') }}</p>
+                </div>
+                <div class="profile-item">
+                    <h4>Status</h4>
+                    <p>Aktif</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Aksi
+        </div>
+        <div class="card-body d-flex gap-2">
+            <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Kembali ke Dashboard
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </div>
+{% endblock %}
+{% block styles %}
+    <style>
+        .profile-meta {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+        }
+
+        .profile-item {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 18px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .profile-item h4 {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .profile-item p {
+            margin: 0;
+            font-size: 16px;
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        .btn-secondary {
+            border-radius: 10px;
+            padding: 10px 18px;
+        }
+    </style>
+{% endblock %}

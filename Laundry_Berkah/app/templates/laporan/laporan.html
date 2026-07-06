@@ -1,0 +1,202 @@
+{% extends 'layout/base.html' %}
+{% set active_page = 'laporan' %}
+{% block title %}Laporan - Laundry Berkah{% endblock %}
+{% block page_title %}
+    <div class="d-flex justify-content-between align-items-center" style="width: 100%;">
+        <div>
+            <p class="text-muted mb-1">Laporan & Statistik</p>
+            <span>Ringkasan Laporan</span>
+        </div>
+    </div>
+{% endblock %}
+{% block content %}
+    <div class="report-filter-card mb-4 p-4 rounded-3 shadow-sm">
+        <form class="row g-3 align-items-end" method="GET" action="{{ url_for('laporan.index') }}">
+            <div class="col-12 col-md-4">
+                <label class="form-label">Rentang Periode</label>
+                <select name="range" class="form-select" id="range-select">
+                    {% for key, label in filter_labels.items() %}
+                        <option value="{{ key }}" {% if selected_filter == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label">Tanggal</label>
+                <input type="date" name="custom_date" class="form-control" value="{{ custom_date }}" id="custom-date" {% if selected_filter != 'per_tanggal' %}disabled{% endif %} />
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label">Bulan</label>
+                <input type="month" name="custom_month" class="form-control" value="{{ custom_month }}" id="custom-month" {% if selected_filter != 'per_bulan' %}disabled{% endif %} />
+            </div>
+            <div class="col-12 col-md-2 text-md-end">
+                <button type="submit" class="btn btn-primary w-100">Terapkan</button>
+            </div>
+        </form>
+        <div class="mt-3 d-flex flex-wrap gap-2">
+            <a href="{{ url_for('laporan.export', range=selected_filter, custom_date=custom_date, custom_month=custom_month, format='pdf') }}" class="btn btn-primary">
+                Cetak PDF
+            </a>
+            <a href="{{ url_for('laporan.export', range=selected_filter, custom_date=custom_date, custom_month=custom_month, format='excel') }}" class="btn btn-success">
+                Export Excel
+            </a>
+        </div>
+    </div>
+
+    <div class="card-grid report-metrics mb-4">
+        <div class="metric-card bg-white rounded-3 shadow-sm p-4 border-start border-4 border-primary">
+            <div class="small text-uppercase text-muted mb-2">Total Transaksi</div>
+            <div class="metric-value">{{ total_transactions }}</div>
+        </div>
+        <div class="metric-card bg-white rounded-3 shadow-sm p-4 border-start border-4 border-info">
+            <div class="small text-uppercase text-muted mb-2">Total Pendapatan</div>
+            <div class="metric-value">{{ total_revenue }}</div>
+        </div>
+        <div class="metric-card bg-white rounded-3 shadow-sm p-4 border-start border-4 border-success">
+            <div class="small text-uppercase text-muted mb-2">Pelanggan Aktif</div>
+            <div class="metric-value">{{ total_customers }}</div>
+        </div>
+        <div class="metric-card bg-white rounded-3 shadow-sm p-4 border-start border-4 border-warning">
+            <div class="small text-uppercase text-muted mb-2">Transaksi Selesai</div>
+            <div class="metric-value">{{ total_completed }}</div>
+        </div>
+    </div>
+
+    <div class="report-section mb-4">
+        <div class="report-section-header mb-3">
+            <div>
+                <h2 class="section-title">Status Transaksi</h2>
+                <p class="text-muted mb-0">Ringkasan status transaksi untuk periode terpilih.</p>
+            </div>
+        </div>
+        <div class="status-card-grid">
+            <div class="status-card status-antrian">
+                <div class="status-title">Antrian</div>
+                <div class="status-value">{{ status_counts.get('Antrian', 0) }}</div>
+            </div>
+            <div class="status-card status-cuci">
+                <div class="status-title">Cuci</div>
+                <div class="status-value">{{ status_counts.get('Cuci', 0) }}</div>
+            </div>
+            <div class="status-card status-pengeringan">
+                <div class="status-title">Pengeringan</div>
+                <div class="status-value">{{ status_counts.get('Pengeringan', 0) }}</div>
+            </div>
+            <div class="status-card status-setrika">
+                <div class="status-title">Setrika</div>
+                <div class="status-value">{{ status_counts.get('Setrika', 0) }}</div>
+            </div>
+            <div class="status-card status-packing">
+                <div class="status-title">Packing</div>
+                <div class="status-value">{{ status_counts.get('Packing', 0) }}</div>
+            </div>
+            <div class="status-card status-siapambil">
+                <div class="status-title">Siap Ambil</div>
+                <div class="status-value">{{ status_counts.get('Siap Ambil', 0) }}</div>
+            </div>
+            <div class="status-card status-selesai">
+                <div class="status-title">Selesai</div>
+                <div class="status-value">{{ status_counts.get('Selesai', 0) }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-card report-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h2 class="section-title mb-0">Transaksi Terbaru</h2>
+                <small class="text-muted">Menampilkan 8 transaksi terakhir.</small>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>No</th>
+                        <th>Nomor</th>
+                        <th>Pelanggan</th>
+                        <th>Status</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if recent_transactions %}
+                        {% for transaksi in recent_transactions %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ transaksi.nomor_transaksi }}</td>
+                            <td>{{ transaksi.pelanggan.nama if transaksi.pelanggan else '-' }}</td>
+                            <td><span class="badge-status badge-{{ transaksi.status_proses|lower|replace(' ', '') }}">{{ transaksi.status_proses }}</span></td>
+                            <td>Rp {{ '{:,.0f}'.format(transaksi.total_harga).replace(',', '.') }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="5" class="text-center text-muted py-4">Belum ada data transaksi.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+{% block styles %}
+    <style>
+        .report-page-header { display:flex; flex-wrap:wrap; justify-content:space-between; gap:1.5rem; align-items:flex-start; }
+        .subtitle { font-size:.95rem; color:#64748b; margin-bottom:.5rem; }
+        .report-title { font-size:2.05rem; margin-bottom:.5rem; }
+        .report-description { max-width:640px; }
+        .report-summary-card { min-width:260px; background:#ffffff; }
+        .icon-circle { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:50%; }
+        .report-filter-card { background:#ffffff; }
+        .report-metrics {
+            display:flex;
+            flex-wrap:wrap;
+            gap:1rem;
+            align-items:stretch;
+        }
+        .report-metrics .metric-card {
+            flex:1 1 calc(25% - 0.75rem);
+            min-width:220px;
+            min-height:140px;
+        }
+        .metric-card .small { text-transform:uppercase; letter-spacing:.08em; }
+        .metric-value { font-size:2rem; font-weight:700; color:#0f172a; }
+        .report-section-header { display:flex; justify-content:space-between; align-items:center; gap:1rem; }
+        .section-title { font-size:1.3rem; margin:0; }
+        .status-card-grid { display:grid; gap:1rem; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); }
+        .status-card { background:#ffffff; padding:1.1rem 1rem; border-radius:18px; box-shadow:0 12px 24px rgba(15,23,42,.06); border-left:4px solid transparent; }
+        .status-title { font-size:.95rem; color:#475569; margin-bottom:.75rem; }
+        .status-value { font-size:1.75rem; font-weight:700; }
+        .status-antrian { border-color:#3b82f6; }
+        .status-cuci { border-color:#06b6d4; }
+        .status-pengeringan { border-color:#8b5cf6; }
+        .status-setrika { border-color:#ec4899; }
+        .status-packing { border-color:#f59e0b; }
+        .status-siapambil { border-color:#10b981; }
+        .status-selesai { border-color:#6366f1; }
+        .table-card { background:#ffffff; }
+        .table thead th { border-bottom-width:2px; }
+        .table-hover tbody tr:hover { background:#f8fafc; }
+        @media (max-width: 768px) {
+            .report-page-header { flex-direction:column; }
+            .report-summary-card { width:100%; }
+            .report-filter-card form { gap:.75rem; }
+        }
+    </style>
+{% endblock %}
+{% block scripts %}
+    <script>
+        const rangeSelect = document.querySelector('select[name="range"]');
+        const customDateInput = document.querySelector('input[name="custom_date"]');
+        const customMonthInput = document.querySelector('input[name="custom_month"]');
+
+        function updateDateInputs() {
+            const selected = rangeSelect.value;
+            customDateInput.disabled = selected !== 'per_tanggal';
+            customMonthInput.disabled = selected !== 'per_bulan';
+        }
+
+        if (rangeSelect) {
+            rangeSelect.addEventListener('change', updateDateInputs);
+            updateDateInputs();
+        }
+    </script>
+{% endblock %}

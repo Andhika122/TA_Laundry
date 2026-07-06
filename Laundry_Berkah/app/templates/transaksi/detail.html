@@ -1,0 +1,366 @@
+{% extends 'layout/base.html' %}
+{% set active_page = 'transaksi' %}
+{% block title %}Detail Transaksi - Laundry Berkah{% endblock %}
+{% block page_title %}<i class="fas fa-info-circle"></i> Detail Transaksi{% endblock %}
+{% block styles %}
+<style>
+.badge-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid transparent;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+    .badge-antrian { background-color: #2563EB; color: white; border-color: #1D4ED8; }
+    .badge-cuci { background-color: #2563EB; color: white; border-color: #1D4ED8; }
+    .badge-pengeringan { background-color: #7C3AED; color: white; border-color: #6D28D9; }
+    .badge-setrika { background-color: #BE185D; color: white; border-color: #9D174D; }
+    .badge-packing { background-color: #D97706; color: white; border-color: #B45309; }
+    .badge-siapambil { background-color: #2563EB; color: white; border-color: #1D4ED8; }
+    .badge-selesai { background-color: #2563EB; color: white; border-color: #1D4ED8; }
+.status-lunas { background-color: #16A34A; color: white; border-color: #15803D; }
+.status-sebagian { background-color: #FBBF24; color: #1F2937; border-color: #F59E0B; }
+.status-belum { background-color: #EF4444; color: white; border-color: #DC2626; }
+.billing-card {
+    border-radius: 20px;
+    padding: 24px;
+    background: linear-gradient(135deg, #0f56c2 0%, #1d8bf8 100%);
+    color: white;
+    box-shadow: 0 20px 40px rgba(15, 86, 194, 0.16);
+}
+.billing-card .billing-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+.billing-card .billing-title {
+    font-size: 14px;
+    opacity: 0.85;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.billing-card .billing-amount {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.billing-card .billing-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.billing-card .billing-buttons .btn {
+    min-width: 110px;
+}
+.billing-card .btn-detail {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.24);
+    color: white;
+}
+.billing-card .btn-pay {
+    background: #ffc107;
+    color: #1f2937;
+    border: none;
+}
+.billing-card .btn-pay:hover {
+    background: #e7b200;
+}
+.table { font-size: 13px; margin-bottom: 0; }
+.table thead th { border-bottom: 2px solid #e2e8f0; font-weight: 600; color: #475569; padding: 10px; }
+.table tbody td { padding: 10px; color: #475569; }
+</style>
+{% endblock %}
+{% block content %}
+<!-- Alerts -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> Informasi Transaksi
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-weight: 600; color: var(--gray); font-size: 12px; text-transform: uppercase;">Nomor Transaksi</label>
+                        <div style="font-size: 16px; font-weight: 700; color: #1e293b;">{{ transaksi.nomor_transaksi }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-weight: 600; color: var(--gray); font-size: 12px; text-transform: uppercase;">Status</label>
+                        <div><span class="badge-status badge-{{ transaksi.status_proses|lower|replace(' ', '') }}">{{ transaksi.status_proses }}</span></div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-weight: 600; color: var(--gray); font-size: 12px; text-transform: uppercase;">Tanggal Masuk</label>
+                        <div style="color: #1e293b;">{{ transaksi.tanggal_masuk.strftime('%d %B %Y %H:%M') }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-weight: 600; color: var(--gray); font-size: 12px; text-transform: uppercase;">Pelanggan</label>
+                        <div style="color: #1e293b;"><strong>{{ transaksi.pelanggan.nama }}</strong></div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-weight: 600; color: var(--gray); font-size: 12px; text-transform: uppercase;">Status Pembayaran</label>
+                        <div style="color: #1e293b; margin-top: 5px;">
+                            {% if payment_status %}
+                                {% if payment_status.status == 'Lunas' %}
+                                <span class="badge-status status-lunas">✓ Lunas</span>
+                                {% elif payment_status.status == 'Sebagian' %}
+                                <span class="badge-status status-sebagian">⊕ Sebagian</span>
+                                {% else %}
+                                <span class="badge-status status-belum">✗ Belum Lunas</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge-status status-belum">✗ Belum Lunas</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-weight: 600; color: var(--gray); font-size: 12px; text-transform: uppercase;">Jumlah Dibayar</label>
+                        <div style="color: #1e293b;">
+                            <strong>Rp {{ '{:,.0f}'.format(payment_status.total_paid if payment_status else 0) }}</strong>
+                        </div>
+                    </div>
+                </div>
+                {% if payment_status and payment_status.remaining > 0 %}
+                <div class="alert alert-warning">
+                    Transaksi belum dibayar lunas. Sisa pembayaran: <strong>Rp {{ '{:,.0f}'.format(payment_status.remaining) }}</strong>.
+                </div>
+                {% elif payment_status and payment_status.status == 'Lunas' %}
+                <div class="alert alert-success">
+                    Transaksi sudah dibayar lunas.
+                </div>
+                {% endif %}
+                {% if transaksi.catatan %}
+                <div class="alert alert-info">
+                    <strong>Catatan:</strong> {{ transaksi.catatan }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Proses Laundry -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tasks"></i> Proses Laundry
+            </div>
+            <div class="card-body">
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
+                    {% set status_list = ['Antrian', 'Cuci', 'Pengeringan', 'Setrika', 'Packing', 'Siap Ambil', 'Selesai'] %}
+                    {% for status in status_list %}
+                        <div style="text-align: center;">
+                            <div class="badge-status badge-{{ status|lower|replace(' ', '') }}" 
+                                 style="width: 100px; display: block; margin-bottom: 8px; {% if status == transaksi.status_proses %}border: 3px solid #1D4ED8; box-shadow: 0 0 10px rgba(29, 78, 216, 0.3);{% endif %}">
+                                {{ status }}
+                            </div>
+                            {% if not loop.last %}
+                            <div style="font-size: 20px; color: #cbd5e1; margin: 0 5px;">→</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <hr>
+
+                <!-- Status Update Section -->
+                <div style="margin-top: 20px;">
+                    <label class="form-label" style="font-weight: 600;">Lanjutkan Proses Laundry</label>
+                    <div>
+                        {% if next_status %}
+                            <button type="button" class="btn btn-primary w-100" id="updateStatusBtn" onclick="updateStatusNext()" {% if not can_advance %}disabled{% endif %}>
+                                <i class="fas fa-forward"></i>
+                                {% if next_status == 'Selesai' %}
+                                    Selesaikan Transaksi
+                                {% else %}
+                                    Lanjut ke {{ next_status }}
+                                {% endif %}
+                            </button>
+                            {% if not can_advance and next_status == 'Selesai' %}
+                                <div class="mt-2 text-muted">Transaksi harus dibayar lunas sebelum selesai.</div>
+                            {% endif %}
+                        {% else %}
+                            <button type="button" class="btn btn-secondary w-100" disabled>
+                                Proses sudah selesai
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Status History -->
+                {% if transaksi.status_history %}
+                <hr style="margin-top: 30px;">
+                <div style="margin-top: 20px;">
+                    <label class="form-label" style="font-weight: 600;">Riwayat Perubahan Status</label>
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        {% for history in transaksi.status_history|reverse %}
+                        <div style="padding: 12px; border-left: 3px solid var(--primary); background: #f8fafc; margin-bottom: 10px; border-radius: 4px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>{{ history.status_baru }}</strong>
+                                    {% if history.status_sebelumnya %}
+                                    <small style="color: var(--gray);">(dari {{ history.status_sebelumnya }})</small>
+                                    {% endif %}
+                                </div>
+                                <small style="color: var(--gray);">{{ history.tanggal_perubahan.strftime('%d %b %Y %H:%M') }}</small>
+                            </div>
+                            {% if history.keterangan %}
+                            <small style="color: var(--gray); display: block; margin-top: 5px;">{{ history.keterangan }}</small>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list"></i> Detail Items
+            </div>
+            <div class="card-body">
+                {% if transaksi.detail_transaksi %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Layanan</th>
+                            <th>Kuantitas</th>
+                            <th>Harga</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detail in transaksi.detail_transaksi %}
+                        <tr>
+                            <td>
+                                <strong>{{ detail.layanan.nama }}</strong>
+                                {% if detail.parfum %}
+                                <br><small>+ {{ detail.parfum.nama }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ detail.kuantitas }}</td>
+                            <td>Rp {{ "{:,.0f}".format(detail.harga_satuan) }}</td>
+                            <td><strong>Rp {{ "{:,.0f}".format(detail.subtotal) }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="billing-card">
+            <div class="billing-header">
+                <div>
+                    <div class="billing-title">Tagihan</div>
+                    <div class="billing-amount">Rp {{ "{:,.0f}".format(transaksi.total_harga) }}</div>
+                </div>
+                <div class="billing-buttons">
+                    <a href="{{ url_for('pembayaran.struk_transaksi', id_transaksi=transaksi.id_transaksi) }}" class="btn btn-detail">
+                        <i class="fas fa-print"></i> Cetak Struk
+                    </a>
+                    {% if payment_status and payment_status.status == 'Lunas' %}
+                    <button class="btn btn-pay" disabled>
+                        Lunas
+                    </button>
+                    {% else %}
+                    <a href="{{ url_for('pembayaran.bayar', id_transaksi=transaksi.id_transaksi) }}" class="btn btn-pay">
+                        Bayar
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% if payment_status and payment_status.status != 'Lunas' %}
+            <div style="font-size: 14px; opacity: 0.92;">
+                Belum lunas. Sisa bayar: <strong>Rp {{ '{:,.0f}'.format(payment_status.remaining) }}</strong>
+            </div>
+            {% elif payment_status and payment_status.status == 'Lunas' %}
+            <div style="font-size: 14px; opacity: 0.92;">
+                Pembayaran sudah lunas.
+            </div>
+            {% else %}
+            <div style="font-size: 14px; opacity: 0.92;">
+                Belum ada pembayaran terdaftar.
+            </div>
+            {% endif %}
+        </div>
+        {% if transaksi.pembayaran %}
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-credit-card"></i> Pembayaran
+            </div>
+            <div class="card-body">
+                {% for pembayaran in transaksi.pembayaran %}
+                <div style="margin-bottom: 10px;">
+                    <small style="color: var(--gray);">Metode: <strong>{{ pembayaran.metode_pembayaran }}</strong></small><br>
+                    <small style="color: var(--gray);">Jumlah: <strong>Rp {{ "{:,.0f}".format(pembayaran.jumlah) }}</strong></small><br>
+                    <small style="color: var(--gray);">Status: <strong>{{ pembayaran.status_pembayaran }}</strong></small><br>
+                    <a href="{{ url_for('pembayaran.struk', id_pembayaran=pembayaran.id_pembayaran) }}" class="btn btn-sm btn-outline-secondary mt-2">
+                        <i class="fas fa-print"></i> Cetak Struk
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        <a href="{{ url_for('transaksi.index') }}" class="btn btn-primary w-100">
+            <i class="fas fa-arrow-left"></i> Kembali ke List
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateStatusNext() {
+    const updateBtn = document.getElementById('updateStatusBtn');
+    updateBtn.disabled = true;
+    updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+
+    fetch('{{ url_for("transaksi.api_update_status_next", id_transaksi=transaksi.id_transaksi) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        updateBtn.disabled = false;
+        updateBtn.innerHTML = '<i class="fas fa-forward"></i> {% if next_status == 'Selesai' %}Selesaikan Transaksi{% else %}Lanjut ke {{ next_status }}{% endif %}';
+
+        if (data.success) {
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        } else {
+            alert('Error: ' + (data.error || 'Gagal mengupdate status'));
+        }
+    })
+    .catch(error => {
+        updateBtn.disabled = false;
+        updateBtn.innerHTML = '<i class="fas fa-forward"></i> {% if next_status == 'Selesai' %}Selesaikan Transaksi{% else %}Lanjut ke {{ next_status }}{% endif %}';
+        alert('Error: ' + error);
+    });
+}
+</script>
+{% endblock %}

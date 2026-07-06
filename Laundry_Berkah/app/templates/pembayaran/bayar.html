@@ -1,0 +1,313 @@
+{% extends 'layout/base.html' %}
+{% set active_page = 'transaksi' %}
+{% block title %}Pembayaran - Laundry Berkah{% endblock %}
+{% block page_title %}<i class="fas fa-credit-card"></i> Pembayaran{% endblock %}
+{% block styles %}
+<style>
+.status-badge {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    display: inline-block;
+    font-size: 14px;
+}
+.status-lunas { background-color: #DCFCE7; color: #166534; }
+.status-sebagian { background-color: #FEF3C7; color: #92400E; }
+.status-belum { background-color: #FEE2E2; color: #991B1B; }
+.info-box {
+    background: #f0f9ff;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 3px solid var(--primary);
+    margin-bottom: 15px;
+}
+.info-label {
+    font-size: 12px;
+    color: var(--gray);
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+.info-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+}
+.metode-card {
+    padding: 15px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 10px;
+}
+.metode-card:hover {
+    border-color: var(--primary);
+    background-color: #f0f9ff;
+}
+.metode-card.selected {
+    border-color: var(--primary);
+    background-color: #f0f9ff;
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> Data Transaksi
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" style="color: var(--gray); font-size: 12px;">Nomor Transaksi</label>
+                        <div style="font-size: 16px; font-weight: 700;">{{ transaksi.nomor_transaksi }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="color: var(--gray); font-size: 12px;">Pelanggan</label>
+                        <div style="font-size: 16px; font-weight: 700;">{{ transaksi.pelanggan.nama }}</div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" style="color: var(--gray); font-size: 12px;">Tanggal Transaksi</label>
+                        <div>{{ transaksi.tanggal_masuk.strftime('%d %B %Y %H:%M') }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="color: var(--gray); font-size: 12px;">Status Pembayaran</label>
+                        <div style="margin-top: 5px;">
+                            {% if status_pembayaran.status == 'Lunas' %}
+                            <span class="status-badge status-lunas">✓ Lunas</span>
+                            {% elif status_pembayaran.status == 'Sebagian' %}
+                            <span class="status-badge status-sebagian">⊕ Sebagian</span>
+                            {% else %}
+                            <span class="status-badge status-belum">✗ Belum Lunas</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('pembayaran.bayar', id_transaksi=transaksi.id_transaksi) }}" id="formPembayaran">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-credit-card"></i> Metode Pembayaran
+                </div>
+                <div class="card-body">
+                    {% for metode in metode_list %}
+                    <label class="metode-card {% if form_data.get('metode_pembayaran') == metode %}selected{% endif %}" onclick="pilihMetode(this)">
+                        <input type="radio" name="metode_pembayaran" value="{{ metode }}" required {% if form_data.get('metode_pembayaran') == metode %}checked{% endif %}>
+                        <div class="metode-label" style="font-size: 16px; font-weight: 600;">
+                            {% if metode == 'Cash' %}
+                            <i class="fas fa-coins"></i> Cash
+                            {% elif metode == 'Transfer' %}
+                            <i class="fas fa-bank"></i> Transfer Bank
+                            {% else %}
+                            <i class="fas fa-qrcode"></i> QRIS
+                            {% endif %}
+                        </div>
+                    </label>
+                    {% endfor %}
+
+                    <div id="cashSection" class="method-section" style="display: none; margin-top: 20px;">
+                        <div class="form-label">Pilih nominal tunai</div>
+                        <div class="payment-option-group">
+                            <button type="button" class="payment-option-button" onclick="setCashNominal({{ transaksi.total_harga }})">Uang Pas</button>
+                            <button type="button" class="payment-option-button" onclick="setCashNominal(5000)">Rp 5.000</button>
+                            <button type="button" class="payment-option-button" onclick="setCashNominal(10000)">Rp 10.000</button>
+                            <button type="button" class="payment-option-button" onclick="setCashNominal(20000)">Rp 20.000</button>
+                            <button type="button" class="payment-option-button" onclick="setCashNominal(50000)">Rp 50.000</button>
+                        </div>
+                    </div>
+
+                    <div id="transferSection" class="method-section" style="display: none; margin-top: 20px;">
+                        <div class="transfer-box">
+                            <div class="transfer-title">Transfer Bank</div>
+                            <div class="transfer-detail">BCA • 1234 5678 90</div>
+                            <div class="transfer-note">a.n. Laundry Berkah</div>
+                        </div>
+                    </div>
+
+                    <div id="qrisSection" class="method-section" style="display: none; margin-top: 20px;">
+                        <div class="qris-box">
+                            <div class="qris-placeholder">
+                                <i class="fas fa-qrcode"></i>
+                            </div>
+                            <div class="qris-label">Scan QRIS untuk bayar</div>
+                        </div>
+                    </div>
+
+                    <div id="amountCard" class="method-section" style="display: none; margin-top: 20px;">
+                        <div class="form-group">
+                            <label class="form-label">Jumlah Pembayaran <span style="color: var(--danger);">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">Rp</span>
+                                <input type="number" class="form-control" name="jumlah" id="jumlahBayar" required min="0" step="1000" placeholder="0" onchange="hitungKembalian()" value="{{ form_data.get('jumlah', '') }}">
+                            </div>
+                            <small class="text-muted" style="margin-top: 5px; display: block;">
+                                Sisa Pembayaran: <strong>Rp {{ "{:,.0f}".format(status_pembayaran.remaining) }}</strong>
+                            </small>
+                        </div>
+                        <div id="kembalianBox" style="display: none; margin-top: 15px;">
+                            <div class="alert alert-info" role="alert">
+                                <strong>Kembalian:</strong>
+                                <div style="font-size: 20px; font-weight: 700; color: var(--success); margin-top: 5px;">
+                                    Rp <span id="nilaiKembalian">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-sticky-note"></i> Catatan
+                </div>
+                <div class="card-body">
+                    <textarea class="form-control" name="catatan" rows="3" placeholder="Catatan pembayaran (opsional)">{{ form_data.get('catatan', '') }}</textarea>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="fas fa-check-circle"></i> Proses Pembayaran
+                </button>
+                <a href="{{ url_for('transaksi.detail', id_transaksi=transaksi.id_transaksi) }}" class="btn btn-secondary flex-grow-1">
+                    <i class="fas fa-arrow-left"></i> Batal
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-calculator"></i> Ringkasan Pembayaran
+            </div>
+            <div class="card-body">
+                <div class="info-box">
+                    <div class="info-label">Total Harga</div>
+                    <div class="info-value">Rp {{ "{:,.0f}".format(status_pembayaran.total_harga) }}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Sudah Dibayar</div>
+                    <div class="info-value" style="color: var(--success);">Rp {{ "{:,.0f}".format(status_pembayaran.total_paid) }}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Sisa Pembayaran</div>
+                    <div class="info-value" style="color: var(--danger);">Rp {{ "{:,.0f}".format(status_pembayaran.remaining) }}</div>
+                </div>
+                {% if status_pembayaran.remaining <= 0 %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> Transaksi telah lunas
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body text-center">
+                <a href="{{ url_for('pembayaran.riwayat', id_transaksi=transaksi.id_transaksi) }}" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-history"></i> Lihat Riwayat Pembayaran
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function pilihMetode(element) {
+    document.querySelectorAll('.metode-card').forEach(card => card.classList.remove('selected'));
+    element.classList.add('selected');
+
+    const input = element.querySelector('input');
+    if (input) {
+        input.checked = true;
+    }
+
+    const metode = input ? input.value : null;
+    if (metode) {
+        document.getElementById('amountCard').style.display = 'block';
+    }
+    if (metode === 'Cash') {
+        showSection('cashSection');
+        document.getElementById('kembalianBox').style.display = 'block';
+    } else if (metode === 'Transfer') {
+        showSection('transferSection');
+        document.getElementById('kembalianBox').style.display = 'none';
+    } else if (metode === 'QRIS') {
+        showSection('qrisSection');
+        document.getElementById('kembalianBox').style.display = 'none';
+    } else {
+        hideAllSections();
+        document.getElementById('amountCard').style.display = 'none';
+        document.getElementById('kembalianBox').style.display = 'none';
+    }
+    hitungKembalian();
+}
+
+function showSection(sectionId) {
+    const sections = ['cashSection', 'transferSection', 'qrisSection'];
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.display = id === sectionId ? 'block' : 'none';
+        }
+    });
+}
+
+function hideAllSections() {
+    ['cashSection', 'transferSection', 'qrisSection', 'amountCard'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.display = 'none';
+        }
+    });
+}
+
+function setCashNominal(value) {
+    const jumlahInput = document.getElementById('jumlahBayar');
+    if (jumlahInput) {
+        jumlahInput.value = value;
+        hitungKembalian();
+    }
+}
+
+function hitungKembalian() {
+    const metode = document.querySelector('input[name="metode_pembayaran"]:checked');
+    if (!metode || metode.value !== 'Cash') {
+        document.getElementById('kembalianBox').style.display = 'none';
+        return;
+    }
+    const jumlahBayar = parseFloat(document.getElementById('jumlahBayar').value.replace(/[^0-9.]/g, '')) || 0;
+    const kembalian = jumlahBayar - {{ transaksi.total_harga }};
+    document.getElementById('nilaiKembalian').textContent = kembalian > 0 ? kembalian.toLocaleString('id-ID') : '0';
+}
+
+document.querySelectorAll('input[name="metode_pembayaran"]').forEach(el => {
+    el.addEventListener('change', function() {
+        const label = this.closest('.metode-card');
+        if (label) {
+            document.querySelectorAll('.metode-card').forEach(card => card.classList.remove('selected'));
+            label.classList.add('selected');
+        }
+        pilihMetode(label);
+    });
+});
+
+document.getElementById('jumlahBayar')?.addEventListener('change', hitungKembalian);
+
+window.addEventListener('DOMContentLoaded', function() {
+    const selectedMetode = document.querySelector('input[name="metode_pembayaran"]:checked');
+    if (selectedMetode) {
+        const label = selectedMetode.closest('.metode-card');
+        if (label) {
+            label.classList.add('selected');
+        }
+        pilihMetode(label);
+    }
+});
+</script>
+{% endblock %}

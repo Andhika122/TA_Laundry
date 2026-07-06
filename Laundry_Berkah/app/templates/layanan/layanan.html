@@ -1,0 +1,170 @@
+{% extends 'layout/base.html' %}
+{% set active_page = 'layanan' %}
+{% block title %}Layanan - Laundry Berkah{% endblock %}
+{% block page_title %}Manajemen Layanan{% endblock %}
+{% block styles %}
+<style>
+    .badge-kategori {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.45rem 0.8rem;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    .badge-cuci { background-color: #CFFAFE; color: #0F766E; }
+    .badge-setrika { background-color: #FCE7F3; color: #9D174D; }
+    .badge-kering { background-color: #EDE9FE; color: #5B21B6; }
+
+    .table thead th { background: #f8fbff; }
+
+    .input-group .form-control {
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+    }
+
+    .input-group .btn {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+</style>
+{% endblock %}
+{% block content %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row align-items-end">
+                <div class="col-md-6">
+                    <form method="get" action="{{ url_for('layanan.index') }}" class="mb-0">
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="search" placeholder="Cari layanan (nama atau deskripsi)..." value="{{ search }}">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i> Cari
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-3 mt-3 mt-md-0">
+                    <form method="get" action="{{ url_for('layanan.index') }}" class="mb-0">
+                        <select class="form-select" name="kategori" onchange="this.form.submit()">
+                            <option value="">-- Semua Kategori --</option>
+                            {% for kat in kategori_list %}
+                                <option value="{{ kat }}" {% if kategori == kat %}selected{% endif %}>{{ kat }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </div>
+                <div class="col-md-3 text-md-end mt-3 mt-md-0">
+                    <a href="{{ url_for('layanan.tambah') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Tambah Layanan
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Total Layanan: <strong>{{ total_count }}</strong></div>
+        <div class="card-body">
+            {% if layanan %}
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Nama Layanan</th>
+                                <th>Kategori</th>
+                                <th>Harga</th>
+                                <th>Durasi</th>
+                                <th>Deskripsi</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for l in layanan %}
+                                <tr>
+                                    <td>{{ loop.index + (current_page - 1) * 10 }}</td>
+                                    <td><strong>{{ l.nama }}</strong></td>
+                                    <td><span class="badge-kategori badge-{{ l.kategori|lower }}">{{ l.kategori }}</span></td>
+                                    <td>Rp {{ "{:,.0f}".format(l.harga) }}</td>
+                                    <td>{{ l.durasi }} {{ l.durasi_unit }}</td>
+                                    <td>{{ l.deskripsi[:50] if l.deskripsi else '' }}{% if l.deskripsi and l.deskripsi|length > 50 %}...{% endif %}</td>
+                                    <td>
+                                        <a href="{{ url_for('layanan.detail', id_layanan=l.id_layanan) }}" class="btn btn-sm btn-outline-info" title="Lihat">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('layanan.edit', id_layanan=l.id_layanan) }}" class="btn btn-sm btn-outline-warning" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete({{ l.id_layanan }})" title="Hapus">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if total_pages > 1 %}
+                    <nav aria-label="Page navigation" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if current_page > 1 %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('layanan.index', page=1, search=search, kategori=kategori) }}">First</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('layanan.index', page=current_page-1, search=search, kategori=kategori) }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            {% for page_num in range(max(1, current_page-2), min(total_pages+1, current_page+3)) %}
+                                <li class="page-item {% if page_num == current_page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url_for('layanan.index', page=page_num, search=search, kategori=kategori) }}">{{ page_num }}</a>
+                                </li>
+                            {% endfor %}
+                            {% if current_page < total_pages %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('layanan.index', page=current_page+1, search=search, kategori=kategori) }}">Next</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('layanan.index', page=total_pages, search=search, kategori=kategori) }}">Last</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">🛠️</div>
+                    <p>Belum ada layanan terdaftar</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <form id="deleteForm" method="POST" style="display: none;"></form>
+{% endblock %}
+{% block scripts %}
+<script>
+    function confirmDelete(id) {
+        if (confirm('Apakah Anda yakin ingin menghapus layanan ini?')) {
+            const form = document.getElementById('deleteForm');
+            form.action = "{{ url_for('layanan.delete', id_layanan=0) }}".replace('/0', '/' + id);
+            form.method = 'POST';
+            form.submit();
+        }
+    }
+</script>
+{% endblock %}

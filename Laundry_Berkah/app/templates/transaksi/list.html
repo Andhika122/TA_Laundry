@@ -1,0 +1,171 @@
+{% extends 'layout/base.html' %}
+{% set active_page = 'transaksi' %}
+{% block title %}Daftar Transaksi - Laundry Berkah{% endblock %}
+{% block page_title %}📋 Daftar Transaksi{% endblock %}
+{% block content %}
+<!-- Alerts -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- Filter & Add Button -->
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <form method="get" action="{{ url_for('transaksi.index') }}" class="mb-0">
+                                        <select class="form-select" name="status" onchange="this.form.submit()">
+                                            <option value="">-- Semua Status --</option>
+                                            <option value="Antrian" {% if status == 'Antrian' %}selected{% endif %}>Antrian</option>
+                                            <option value="Cuci" {% if status == 'Cuci' %}selected{% endif %}>Sedang Dicuci</option>
+                                            <option value="Pengeringan" {% if status == 'Pengeringan' %}selected{% endif %}>Pengeringan</option>
+                                            <option value="Setrika" {% if status == 'Setrika' %}selected{% endif %}>Setrika</option>
+                                            <option value="Packing" {% if status == 'Packing' %}selected{% endif %}>Packing</option>
+                                            <option value="Siap Ambil" {% if status == 'Siap Ambil' %}selected{% endif %}>Siap Ambil</option>
+                                            <option value="Selesai" {% if status == 'Selesai' %}selected{% endif %}>Selesai</option>
+                                        </select>
+                                    </form>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <a href="{{ url_for('transaksi.baru') }}" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> Transaksi Baru
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Transaksi Table -->
+                    <div class="card">
+                        <div class="card-header">
+                            Total Transaksi: <strong>{{ total_count }}</strong>
+                        </div>
+                        <div class="card-body">
+                            {% if transaksi %}
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>No. Transaksi</th>
+                                            <th>Pelanggan</th>
+                                            <th>Tanggal</th>
+                                            <th>Status</th>
+                                            <th>Status Bayar</th>
+                                            <th>Total</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for t in transaksi %}
+                                        <tr>
+                                            <td><strong>{{ t.nomor_transaksi }}</strong></td>
+                                            <td>{{ t.pelanggan.nama }}</td>
+                                            <td>{{ t.tanggal_masuk.strftime('%d %b %Y') }}</td>
+                                            <td>
+                                                <span class="badge-status badge-{{ t.status_proses|lower|replace(' ', '') }}">
+                                                    {{ t.status_proses }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% set pay_status = payment_status_map.get(t.id_transaksi) %}
+                                                {% if pay_status %}
+                                                    {% if pay_status.status == 'Lunas' %}
+                                                    <span class="badge-status status-lunas">✓ Lunas</span>
+                                                    {% elif pay_status.status == 'Sebagian' %}
+                                                    <span class="badge-status status-sebagian">⊕ Sebagian</span>
+                                                    {% else %}
+                                                    <span class="badge-status status-belum">✗ Belum Lunas</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="badge-status status-belum">✗ Belum Lunas</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>Rp {{ "{:,.0f}".format(t.total_harga) }}</td>
+                                            <td>
+                                                <a href="{{ url_for('transaksi.detail', id_transaksi=t.id_transaksi) }}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i> Lihat
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Pagination -->
+                            {% if total_pages > 1 %}
+                            <nav aria-label="Page navigation" style="margin-top: 20px;">
+                                <ul class="pagination justify-content-center">
+                                    {% if current_page > 1 %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('transaksi.index', page=1, status=status) }}">First</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('transaksi.index', page=current_page-1, status=status) }}">Previous</a>
+                                    </li>
+                                    {% endif %}
+                                    
+                                    {% for page_num in range(max(1, current_page-2), min(total_pages+1, current_page+3)) %}
+                                    <li class="page-item {% if page_num == current_page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('transaksi.index', page=page_num, status=status) }}">{{ page_num }}</a>
+                                    </li>
+                                    {% endfor %}
+                                    
+                                    {% if current_page < total_pages %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('transaksi.index', page=current_page+1, status=status) }}">Next</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('transaksi.index', page=total_pages, status=status) }}">Last</a>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                            {% endif %}
+                            {% else %}
+                            <div class="empty-state">
+                                <div style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;">📝</div>
+                                <p>Belum ada transaksi</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+{% endblock %}
+{% block styles %}
+    <style>
+        .badge-status {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border: 1px solid transparent;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+        }
+        .badge-antrian { background-color: #2563EB; color: white; border-color: #1D4ED8; }
+        .badge-cuci { background-color: #2563EB; color: white; border-color: #1D4ED8; }
+        .badge-pengeringan { background-color: #7C3AED; color: white; border-color: #6D28D9; }
+        .badge-setrika { background-color: #BE185D; color: white; border-color: #9D174D; }
+        .badge-packing { background-color: #D97706; color: white; border-color: #B45309; }
+        .badge-siapambil { background-color: #2563EB; color: white; border-color: #1D4ED8; }
+        .badge-selesai { background-color: #2563EB; color: white; border-color: #1D4ED8; }
+        .status-lunas { background-color: #16A34A; color: white; border-color: #15803D; }
+        .status-sebagian { background-color: #FBBF24; color: #1F2937; border-color: #F59E0B; }
+        .status-belum { background-color: #EF4444; color: white; border-color: #DC2626; }
+        .empty-state { text-align: center; padding: 40px; color: var(--gray); }
+        .table { font-size: 14px; margin-bottom: 0; }
+        .table thead th { border-bottom: 2px solid #e2e8f0; font-weight: 600; color: #475569; padding: 12px; }
+        .table tbody td { padding: 12px; color: #475569; }
+    </style>
+{% endblock %}

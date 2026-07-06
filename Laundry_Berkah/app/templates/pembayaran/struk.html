@@ -1,0 +1,132 @@
+{% extends 'layout/base.html' %}
+{% set active_page = 'transaksi' %}
+{% block title %}Struk Pembayaran - Laundry Berkah{% endblock %}
+{% block page_title %}<i class="fas fa-receipt"></i> Struk Pembayaran{% endblock %}
+{% block styles %}
+<style>
+.struk-container {
+    max-width: 760px;
+    margin: 0 auto;
+    background: linear-gradient(180deg,#ffffff 0%,#f7fbff 100%);
+    padding: 24px;
+    border-radius: 16px;
+    border: 1px solid rgba(14,42,120,0.04);
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
+}
+.struk-header { text-align: center; margin-bottom: 24px; border-bottom: 2px dashed #e2e8f0; padding-bottom: 20px; }
+.struk-title { font-size: 22px; font-weight: 800; color: #1e293b; }
+.struk-subtitle { font-size: 13px; color: var(--gray); margin-top: 6px; }
+.struk-info, .struk-items, .struk-summary, .struk-payment { font-size: 13px; color: var(--gray); margin-bottom: 18px; }
+.btn-wa { background: #25D366; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 10px; }
+.btn-wa:hover { background: #1ebe5a; }
+.struk-info-row, .struk-summary-row, .struk-payment-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.struk-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; color: #1e293b; }
+.struk-item-name { font-weight: 600; color: #1e293b; }
+.struk-item-qty, .struk-item-price { font-size: 12px; color: var(--gray); }
+.struk-summary-row.total { font-size: 16px; font-weight: 700; color: var(--primary); margin-top: 10px; }
+.struk-payment-row.lunas { font-size: 14px; font-weight: 700; color: #16A34A; margin-top: 10px; }
+.struk-footer { text-align: center; margin-top: 20px; font-size: 12px; color: var(--gray); }
+.struk-nomor { font-weight: 700; color: #1e293b; }
+.action-buttons { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+.btn-print { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; }
+.btn-print:hover { background: var(--secondary); }
+@media print {
+    body { background: white; overflow: auto; }
+    .navbar, .sidebar, .action-buttons { display: none; }
+    .main-content { margin-left: 0; padding: 0; }
+    .struk-container { box-shadow: none; max-width: 100%; border-radius: 0; padding: 0; }
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="struk-container">
+    <div class="struk-header">
+        <div class="struk-title">🧺 LAUNDRY BERKAH</div>
+        <div class="struk-subtitle">BUKTI PEMBAYARAN</div>
+    </div>
+    <div class="struk-info">
+        <div class="struk-info-row">
+            <span>Order ID</span>
+            <span class="struk-nomor">{{ receipt.nomor_transaksi }}</span>
+        </div>
+        <div class="struk-info-row">
+            <span>Pelanggan</span>
+            <span class="struk-nomor">{{ receipt.pelanggan_nama }}</span>
+        </div>
+        <div class="struk-info-row">
+            <span>Telepon</span>
+            <span class="struk-nomor">{{ receipt.pelanggan_telepon }}</span>
+        </div>
+        <div class="struk-info-row">
+            <span>Tgl Pesan</span>
+            <span>{{ receipt.tanggal_masuk.strftime('%d-%m-%y %H:%M') }}</span>
+        </div>
+        <div class="struk-info-row">
+            <span>Est Selesai</span>
+            <span>{{ receipt.tanggal_selesai_estimasi.strftime('%d-%m-%y %H:%M') if receipt.tanggal_selesai_estimasi else '-' }}</span>
+        </div>
+    </div>
+    <div class="struk-items">
+        {% for item in receipt.detail_items %}
+        <div class="struk-item">
+            <span class="struk-item-name">{{ item.nama }}</span>
+            <span class="struk-item-price">{{ item.kuantitas }} Satuan X {{ '{:,.0f}'.format(item.harga).replace(',', '.') }}</span>
+            <span class="struk-item-price">{{ '{:,.0f}'.format(item.subtotal).replace(',', '.') }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="struk-summary">
+        <div class="struk-summary-row">
+            <span>Total Harga</span>
+            <span>Rp {{ '{:,.0f}'.format(receipt.total_harga).replace(',', '.') }}</span>
+        </div>
+        <div class="struk-summary-row">
+            <span>Bayar Sekarang</span>
+            <span>Rp {{ '{:,.0f}'.format(receipt.jumlah_bayar).replace(',', '.') }}</span>
+        </div>
+        <div class="struk-summary-row">
+            <span>Sudah Dibayar</span>
+            <span>Rp {{ '{:,.0f}'.format(receipt.total_paid).replace(',', '.') }}</span>
+        </div>
+        <div class="struk-summary-row total">
+            <span>Kurang</span>
+            <span>Rp {{ '{:,.0f}'.format(receipt.kurang).replace(',', '.') }}</span>
+        </div>
+    </div>
+    <div class="struk-payment">
+        <div class="struk-payment-row">
+            <span>Item</span>
+            <span>{{ receipt.item_count }} Item</span>
+        </div>
+        <div class="struk-payment-row">
+            <span>Parfum</span>
+            <span>{{ receipt.parfum }}</span>
+        </div>
+        <div class="struk-payment-row lunas">
+            <span>Catatan</span>
+            <span>{{ receipt.catatan }}</span>
+        </div>
+    </div>
+    <div class="struk-payment">
+        <div class="struk-payment-row">
+            <span>Metode Pembayaran</span>
+            <span>{{ receipt.metode_pembayaran }}</span>
+        </div>
+        <div class="struk-payment-row lunas">
+            <span>Status</span>
+            <span>{{ receipt.status_pembayaran }}</span>
+        </div>
+    </div>
+    <div class="struk-footer">
+        Terima kasih telah menggunakan layanan Laundry Berkah.
+    </div>
+    <div class="action-buttons">
+        {% if receipt.whatsapp_url %}
+        <a href="{{ receipt.whatsapp_url }}" target="_blank" rel="noopener noreferrer" class="btn-wa">
+            <i class="fab fa-whatsapp"></i> Kirim lewat WA
+        </a>
+        {% endif %}
+        <button class="btn-print" type="button" onclick="window.print()">Cetak Struk</button>
+    </div>
+</div>
+{% endblock %}

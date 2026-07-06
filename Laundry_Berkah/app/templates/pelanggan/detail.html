@@ -1,0 +1,163 @@
+{% extends 'layout/base.html' %}
+{% set active_page = 'pelanggan' %}
+{% block title %}Detail Pelanggan - Laundry Berkah{% endblock %}
+{% block page_title %}
+    <a href="{{ url_for('pelanggan.index') }}" style="color: var(--gray); text-decoration: none; font-size: 18px;">
+        <i class="fas fa-arrow-left"></i> Pelanggan
+    </a>
+    <span style="color: var(--gray);">/ Detail Pelanggan</span>
+{% endblock %}
+{% block content %}
+    <!-- Detail Card -->
+    <div class="card" style="max-width: 600px;">
+        <div class="card-header">
+            <i class="fas fa-user-info"></i> Data Pelanggan
+        </div>
+        <div class="card-body">
+            <div class="detail-row">
+                <div class="detail-label">Nama Pelanggan</div>
+                <div class="detail-value">{{ pelanggan.nama }}</div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Nomor Telepon</div>
+                <div class="detail-value">{{ pelanggan.telepon }}</div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Email</div>
+                <div class="detail-value">{{ pelanggan.email }}</div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Alamat</div>
+                <div class="detail-value">{{ pelanggan.alamat }}</div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Jenis Kelamin</div>
+                <div class="detail-value">{{ pelanggan.jenis_kelamin }}</div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Tanggal Daftar</div>
+                <div class="detail-value">{{ pelanggan.created_at.strftime('%d %B %Y %H:%M') }}</div>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <a href="{{ url_for('pelanggan.edit', id_pelanggan=pelanggan.id_pelanggan) }}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Edit Pelanggan
+                </a>
+                <a href="{{ url_for('pelanggan.index') }}" class="btn btn-secondary ms-2">
+                    <i class="fas fa-arrow-left"></i> Kembali
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Riwayat Transaksi Pelanggan -->
+    <div class="card" style="margin-top: 30px;">
+        <div class="card-header">
+            <i class="fas fa-history"></i> Riwayat Transaksi
+        </div>
+        <div class="card-body">
+            {% if riwayat_transaksi %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>No. Transaksi</th>
+                            <th>Tanggal</th>
+                            <th>Status</th>
+                            <th>Layanan</th>
+                            <th>Total</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trx in riwayat_transaksi %}
+                        <tr>
+                            <td>
+                                <strong>{{ trx.nomor_transaksi }}</strong>
+                            </td>
+                            <td>{{ trx.tanggal_masuk.strftime('%d %b %Y %H:%M') }}</td>
+                            <td>
+                                <span class="badge-status badge-{{ trx.status_proses|lower|replace(' ', '') }}">
+                                    {{ trx.status_proses }}
+                                </span>
+                            </td>
+                            <td>
+                                <small>
+                                    {% if trx.detail_transaksi %}
+                                        {% for detail in trx.detail_transaksi[:2] %}
+                                            {{ detail.layanan.nama }}<br>
+                                        {% endfor %}
+                                        {% if trx.detail_transaksi|length > 2 %}
+                                            <em>+{{ trx.detail_transaksi|length - 2 }} lainnya</em>
+                                        {% endif %}
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <strong>Rp {{ "{:,.0f}".format(trx.total_harga) }}</strong>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('transaksi.detail', id_transaksi=trx.id_transaksi) }}" 
+                                   class="btn btn-sm btn-outline-primary" 
+                                   title="Lihat Detail">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-secondary">
+                <i class="fas fa-info-circle"></i> Belum ada riwayat transaksi untuk pelanggan ini.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+{% block styles %}
+    <style>
+        .detail-row {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: var(--gray);
+            font-size: 13px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .detail-value {
+            font-size: 16px;
+            color: #1e293b;
+        }
+
+        .badge-status { padding: 8px 16px; border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: uppercase; display:inline-flex; align-items:center; justify-content:center; color: #ffffff; }
+        .badge-antrian { background: var(--primary); }
+        .badge-cuci { background: var(--primary); }
+        .badge-pengeringan { background: #7C3AED; }
+        .badge-setrika { background: #BE185D; }
+        .badge-packing { background: #D97706; }
+        .badge-siapambil { background: var(--primary); }
+        .badge-selesai { background: var(--primary); }
+        .table { font-size: 13px; margin-bottom: 0; }
+        .table thead th { border-bottom: 2px solid #e2e8f0; font-weight: 600; color: #475569; padding: 10px; }
+        .table tbody td { padding: 10px; color: #475569; }
+    </style>
+{% endblock %}

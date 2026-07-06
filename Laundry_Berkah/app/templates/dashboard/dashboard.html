@@ -1,0 +1,264 @@
+{% extends 'layout/base.html' %}
+{% set active_page = 'dashboard' %}
+{% block title %}Dashboard - Laundry Berkah{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block styles %}
+<style>
+    .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 18px;
+        margin-bottom: 28px;
+    }
+
+    .status-card {
+        border-radius: 18px;
+        padding: 24px;
+        min-height: 170px;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 12px;
+        color: #0f172a;
+    }
+
+    .status-card.antrian {
+        background: #DBEAFE;
+        border-top: 4px solid #2563EB;
+        color: #1D4ED8;
+    }
+    /* Make other process cards match Antrian for consistent visibility */
+    .status-card.proses,
+    .status-card.siap-ambil,
+    .status-card.selesai,
+    .status-card.terlambat {
+        background: #DBEAFE;
+        border-top: 4px solid #2563EB;
+        color: #1D4ED8;
+    }
+
+    .status-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 32px rgba(15, 23, 42, 0.1);
+    }
+
+    .status-card .number {
+        font-size: 3rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+    }
+
+    .status-card .label {
+        font-size: 0.82rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        font-weight: 600;
+    }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 18px;
+        margin-bottom: 24px;
+    }
+
+    .stats-row > div {
+        min-width: 0;
+    }
+
+    .stats-row .card {
+        min-height: 150px;
+        border-radius: 18px;
+    }
+
+    .stats-row .card-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 10px;
+        padding: 24px;
+    }
+
+    .stats-row .h2 {
+        margin: 0;
+        font-size: 2.2rem;
+        color: #0f172a;
+    }
+
+    .card-header {
+        background: #f8fbff;
+        border-bottom: none;
+    }
+
+    .table-responsive {
+        background: linear-gradient(180deg,#fbfdff 0%,#f3f8ff 100%);
+        border-radius: 16px;
+        padding: 10px;
+        box-shadow: 0 6px 18px rgba(15,23,42,0.04), inset 0 0 0 1px rgba(14,42,120,0.03);
+    }
+
+    .table thead th {
+        font-size: 0.8rem;
+        letter-spacing: 0.08em;
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 16px;
+    }
+
+    .badge {
+        border-radius: 999px;
+        padding: 0.45rem 0.9rem;
+        font-size: 0.82rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border: 1px solid transparent;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+        background-color: #E2E8F0;
+        color: #0f172a;
+    }
+
+    .badge-antrian { background-color: #2563EB; color: white; border-color: #1D4ED8; }
+    .badge-cuci { background-color: #2563EB; color: white; border-color: #1D4ED8; }
+    .badge-pengeringan { background-color: #7C3AED; color: white; border-color: #6D28D9; }
+    .badge-setrika { background-color: #BE185D; color: white; border-color: #9D174D; }
+    .badge-packing { background-color: #D97706; color: white; border-color: #B45309; }
+    .badge-siapambil { background-color: #2563EB; color: white; border-color: #1D4ED8; }
+    .badge-selesai { background-color: #2563EB; color: white; border-color: #1D4ED8; }
+    .badge-lunas { background-color: #16A34A; color: white; border-color: #15803D; }
+    .badge-sebagian { background-color: #FBBF24; color: #1F2937; border-color: #F59E0B; }
+    .badge-belum { background-color: #EF4444; color: white; border-color: #DC2626; }
+
+    .table thead th { background: #f8fbff; }
+</style>
+{% endblock %}
+{% block content %}
+    <div class="stats-row">
+        <div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="section-title">Pendapatan Hari Ini</div>
+                    <div class="h2">Rp {{ "{:,.0f}".format(today_revenue) }}</div>
+                </div>
+            </div>
+        </div>
+        <div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="section-title">Total Pelanggan</div>
+                    <div class="h2">{{ total_customers }}</div>
+                </div>
+            </div>
+        </div>
+        <div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="section-title">Total Transaksi</div>
+                    <div class="h2">{{ total_transactions }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-grid">
+        <div class="status-card antrian">
+            <div class="label">Antrian</div>
+            <div class="number">{{ status_counts.get('Antrian', 0) }}</div>
+        </div>
+        <div class="status-card proses">
+            <div class="label">Proses</div>
+            <div class="number">{{ status_counts.get('Proses', 0) }}</div>
+        </div>
+        <div class="status-card siap-ambil">
+            <div class="label">Siap Ambil</div>
+            <div class="number">{{ status_counts.get('Siap Ambil', 0) }}</div>
+        </div>
+        <div class="status-card terlambat">
+            <div class="label">Terlambat</div>
+            <div class="number text-danger">{{ total_late_orders }}</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Transaksi Terbaru</div>
+        <div class="card-body">
+            {% if recent_transactions %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Nomor</th>
+                                <th>Pelanggan</th>
+                                <th>Status</th>
+                                <th>Total</th>
+                                <th>Tanggal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trx in recent_transactions %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ trx.nomor }}</td>
+                                    <td>{{ trx.pelanggan }}</td>
+                                    <td><span class="badge badge-{{ trx.status|lower|replace(' ', '') }}">{{ trx.status }}</span></td>
+                                    <td>Rp {{ "{:,.0f}".format(trx.total) }}</td>
+                                    <td>{{ trx.tanggal }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <p>Belum ada transaksi terbaru.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Layanan Terpopuler</div>
+        <div class="card-body">
+            {% if service_statistics %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Layanan</th>
+                                <th>Jumlah</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for service in service_statistics %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ service.layanan }}</td>
+                                    <td>{{ service.jumlah }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">🛠️</div>
+                    <p>Belum ada data layanan populer.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

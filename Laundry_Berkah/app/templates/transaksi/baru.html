@@ -1,0 +1,620 @@
+{% extends 'layout/base.html' %}
+{% set active_page = 'transaksi' %}
+{% block title %}Transaksi Baru - Laundry Berkah{% endblock %}
+{% block page_title %}<i class="fas fa-receipt"></i> Transaksi Baru{% endblock %}
+{% block styles %}
+<style>
+.form-label { font-weight: 600; color: #1e293b; margin-bottom: 8px; font-size: 14px; }
+.item-row {
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border-left: 3px solid var(--primary);
+}
+.summary-box {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-top: 20px;
+}
+.summary-label { font-size: 13px; opacity: 0.9; text-transform: uppercase; }
+.summary-value { font-size: 24px; font-weight: 700; margin-top: 5px; }
+
+/* Modal Styling */
+.modal-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    border: none;
+}
+
+.modal-header .modal-title {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group .form-label {
+    margin-bottom: 10px;
+}
+
+/* Toast Notification */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 400px;
+}
+
+.toast-success {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    color: white;
+    padding: 16px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    animation: slideIn 0.3s ease;
+}
+
+.toast-error {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    color: white;
+    padding: 16px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    animation: slideIn 0.3s ease;
+}
+
+.toast-success i,
+.toast-error i {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Loading State */
+.btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.btn-loading {
+    position: relative;
+}
+
+.btn-loading .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 0.6s linear infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.add-customer-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+.add-customer-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.add-customer-btn i {
+    font-size: 16px;
+}
+
+.input-group .add-customer-btn {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+
+.input-group .add-customer-btn:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+</style>
+{% endblock %}
+{% block content %}
+<!-- Alerts -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<form method="POST" action="{{ url_for('transaksi.baru') }}" id="formTransaksi">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-user"></i> Data Pelanggan
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Cari Pelanggan <span style="color: var(--danger);">*</span></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="searchPelanggan" placeholder="Ketik nama atau telepon...">
+                            <button type="button" class="add-customer-btn" data-bs-toggle="modal" data-bs-target="#modalTambahPelanggan" title="Tambah Pelanggan Baru">
+                                <i class="fas fa-user-plus"></i> Pelanggan Baru
+                            </button>
+                        </div>
+                        <small class="text-muted">Hasil pencarian akan muncul di bawah, atau tambah pelanggan baru dengan klik tombol hijau.</small>
+                    </div>
+                    <div id="hasilPencarian" style="display: none; margin-top: 10px;">
+                        <div id="daftarPelanggan"></div>
+                    </div>
+                    <div class="form-group">
+                        <input type="hidden" id="id_pelanggan" name="id_pelanggan" value="{{ form_data.get('id_pelanggan', '') }}">
+                        <div id="pelangganTerpilih" style="padding: 10px; background: #f0f9ff; border-radius: 8px; display: {% if selected_pelanggan %}block{% else %}none{% endif %};">
+                            <strong>Pelanggan: </strong><span id="namaPelanggan">{{ selected_pelanggan.nama if selected_pelanggan else '' }}</span><br>
+                            <strong>Telepon: </strong><span id="teleponPelanggan">{{ selected_pelanggan.telepon if selected_pelanggan else '' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-list"></i> Daftar Layanan
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Kategori Layanan</label>
+                        <select class="form-select" id="kategoriLayanan">
+                            <option value="">-- Pilih Kategori --</option>
+                            {% for kat in kategori_list %}
+                            <option value="{{ kat }}">{{ kat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="layananOptionsContainer"></div>
+                    <div id="itemsList"></div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-success" id="tambahItemBtn">
+                            <i class="fas fa-plus"></i> Tambah Item
+                        </button>
+                        <a href="{{ url_for('layanan.index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-cogs"></i> Buka Layanan
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-sticky-note"></i> Catatan
+                </div>
+                <div class="card-body">
+                    <textarea class="form-control" name="catatan" rows="3" placeholder="Catatan tambahan untuk transaksi...">{{ form_data.get('catatan', '') }}</textarea>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-tag"></i> Promo
+                </div>
+                <div class="card-body">
+                    <select class="form-select" name="promo_id" id="promoSelect">
+                        <option value="">-- Tanpa Promo --</option>
+                        {% for promo in promo_list %}
+                        <option value="{{ promo.id_promo }}" {% if form_data.get('promo_id')|string == promo.id_promo|string %}selected{% endif %}>
+                            {{ promo.nama }} - {{ promo.tipe|upper }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="summary-box">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="summary-label">Subtotal</div>
+                        <div class="summary-value" id="subtotal">Rp 0</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="summary-label">Diskon</div>
+                        <div class="summary-value" id="diskon">Rp 0</div>
+                    </div>
+                </div>
+                <hr style="border-color: rgba(255,255,255,0.3);">
+                <div>
+                    <div class="summary-label">Total Harga</div>
+                    <div class="summary-value" id="total">Rp 0</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-wallet"></i> Metode Pembayaran
+                </div>
+                <div class="card-body">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="payment_option" id="payLater" value="pay_later" checked>
+                        <label class="form-check-label" for="payLater">Bayar Nanti</label>
+                    </div>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="radio" name="payment_option" id="payNow" value="pay_now">
+                        <label class="form-check-label" for="payNow">Bayar Sekarang (Lunas otomatis)</label>
+                    </div>
+                    <small class="text-muted">Jika pilih Bayar Sekarang, transaksi akan langsung dianggap lunas dan jumlah bayar otomatis set ke total transaksi.</small>
+                </div>
+            </div>
+            <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="fas fa-save"></i> Buat Transaksi
+                </button>
+                <a href="{{ url_for('transaksi.index') }}" class="btn btn-secondary flex-grow-1">
+                    <i class="fas fa-times"></i> Batal
+                </a>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="modal fade" id="modalTambahPelanggan" tabindex="-1" aria-labelledby="modalTambahPelangganLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTambahPelangganLabel">
+                    <i class="fas fa-user-plus"></i> Tambah Pelanggan Baru
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="tambahPelangganError" class="alert alert-danger" role="alert" style="display: none;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="errorMessage"></span>
+                </div>
+                <form id="formTambahPelanggan">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label"><i class="fas fa-user"></i> Nama Pelanggan <span style="color: var(--danger);">*</span></label>
+                                <input type="text" class="form-control" name="nama" required placeholder="Contoh: Budi Santoso">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label"><i class="fas fa-phone"></i> Nomor Telepon <span style="color: var(--danger);">*</span></label>
+                                <input type="tel" class="form-control" name="telepon" required placeholder="081234567890">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="form-label"><i class="fas fa-envelope"></i> Email <span style="color: var(--danger);">*</span></label>
+                                <input type="email" class="form-control" name="email" required placeholder="budi@example.com">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-map-marker-alt"></i> Alamat <span style="color: var(--danger);">*</span></label>
+                        <textarea class="form-control" name="alamat" rows="3" required placeholder="Jalan, No. Rumah, Kelurahan, Kecamatan, Kota, Provinsi"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label"><i class="fas fa-venus-mars"></i> Jenis Kelamin <span style="color: var(--danger);">*</span></label>
+                                <select class="form-select" name="jenis_kelamin" required>
+                                    <option value="">-- Pilih Jenis Kelamin --</option>
+                                    <option value="Laki-laki">Laki-laki</option>
+                                    <option value="Perempuan">Perempuan</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-success" id="submitBtnTambahPelanggan">
+                            <i class="fas fa-save"></i> Simpan Pelanggan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let itemCount = 0;
+const restoredItems = {{ selected_items|tojson }};
+
+// Toast Notification System
+function showToast(message, type = 'success', duration = 3000) {
+    const container = document.getElementById('toastContainer') || (() => {
+        const div = document.createElement('div');
+        div.id = 'toastContainer';
+        div.className = 'toast-container';
+        document.body.appendChild(div);
+        return div;
+    })();
+
+    const toast = document.createElement('div');
+    toast.className = `toast-${type}`;
+    const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+    toast.innerHTML = `<i class="${icon}"></i><span>${message}</span>`;
+    
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
+function renderPelangganResult(pelanggan) {
+    return `
+        <button type="button" class="list-group-item list-group-item-action" onclick="pilihPelanggan(${pelanggan.id}, '${pelanggan.nama.replace(/'/g, "\'" )}', '${pelanggan.telepon.replace(/'/g, "\'" )}')">
+            <strong>${pelanggan.nama}</strong><br>
+            <small>${pelanggan.telepon} - ${pelanggan.alamat}</small>
+        </button>
+    `;
+}
+
+function pilihPelanggan(id, nama, telepon) {
+    document.getElementById('id_pelanggan').value = id;
+    document.getElementById('namaPelanggan').textContent = nama;
+    document.getElementById('teleponPelanggan').textContent = telepon;
+    document.getElementById('pelangganTerpilih').style.display = 'block';
+    document.getElementById('hasilPencarian').style.display = 'none';
+    document.getElementById('searchPelanggan').value = '';
+    showToast(`Pelanggan "${nama}" dipilih`, 'success');
+}
+
+function setSelectedPelanggan(pelanggan) {
+    pilihPelanggan(pelanggan.id, pelanggan.nama, pelanggan.telepon);
+    const modalEl = document.getElementById('modalTambahPelanggan');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+}
+
+function resetTambahPelangganForm() {
+    document.getElementById('formTambahPelanggan').reset();
+    const errorEl = document.getElementById('tambahPelangganError');
+    errorEl.textContent = '';
+    errorEl.style.display = 'none';
+    const submitBtn = document.getElementById('submitBtnTambahPelanggan');
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fas fa-save"></i> Simpan Pelanggan';
+}
+
+function searchPelanggan(keyword) {
+    if (keyword.length < 2) {
+        document.getElementById('hasilPencarian').style.display = 'none';
+        return;
+    }
+    fetch(`{{ url_for('transaksi.api_search_pelanggan', keyword='KEYWORD') }}`.replace('KEYWORD', encodeURIComponent(keyword)))
+        .then(r => r.json())
+        .then(data => {
+            if (!data || !data.length) {
+                document.getElementById('daftarPelanggan').innerHTML = '<div class="alert alert-secondary">Tidak ada pelanggan ditemukan.</div>';
+                document.getElementById('hasilPencarian').style.display = 'block';
+                return;
+            }
+            document.getElementById('daftarPelanggan').innerHTML = `<div class="list-group">${data.map(renderPelangganResult).join('')}</div>`;
+            document.getElementById('hasilPencarian').style.display = 'block';
+        });
+}
+
+document.getElementById('searchPelanggan')?.addEventListener('input', function(e) {
+    searchPelanggan(e.target.value.trim());
+});
+
+function tambahItem(id, nama, harga) {
+    itemCount++;
+    const itemHtml = `
+        <div class="item-row" id="item-${itemCount}">
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>${nama}</strong><br>
+                    <small>Rp ${harga.toLocaleString('id-ID')}</small>
+                    <input type="hidden" class="layanan" name="layanan[]" value="${id}">
+                </div>
+                <div class="col-md-4">
+                    <input type="number" class="form-control kuantitas" name="kuantitas[]" value="1" min="1" onchange="hitungTotal()">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-sm btn-danger" onclick="hapusItem(${itemCount})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <input type="hidden" class="parfum" name="parfum[]" value="">
+        </div>
+    `;
+    document.getElementById('itemsList').insertAdjacentHTML('beforeend', itemHtml);
+    hitungTotal();
+}
+
+function loadLayananByKategori(kategori) {
+    if (!kategori) {
+        document.getElementById('layananOptionsContainer').innerHTML = '';
+        return;
+    }
+    fetch(`{{ url_for('transaksi.api_layanan_by_kategori', kategori='KATEGORI') }}`.replace('KATEGORI', encodeURIComponent(kategori)))
+        .then(r => r.json())
+        .then(data => {
+            const html = `
+                <div class="form-group">
+                    <label class="form-label">Pilih Layanan</label>
+                    <div class="list-group">
+                        ${data.map(l => `
+                            <button type="button" class="list-group-item list-group-item-action" onclick="tambahItem(${l.id}, '${l.nama.replace(/'/g, "\'")}', ${l.harga})">
+                                <strong>${l.nama}</strong><br>
+                                <small>Rp ${l.harga.toLocaleString('id-ID')} - ${l.durasi} ${l.durasi_unit}</small>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            document.getElementById('layananOptionsContainer').innerHTML = html;
+        });
+}
+
+document.getElementById('kategoriLayanan')?.addEventListener('change', function(e) {
+    loadLayananByKategori(e.target.value);
+});
+
+function hapusItem(id) {
+    const row = document.getElementById(`item-${id}`);
+    if (row) {
+        row.remove();
+        hitungTotal();
+    }
+}
+
+function hitungTotal() {
+    let subtotal = 0;
+    document.querySelectorAll('.item-row').forEach(row => {
+        const hargaText = row.querySelector('small').textContent;
+        const harga = parseFloat(hargaText.replace(/[^0-9]/g, '')) || 0;
+        const kuantitas = parseInt(row.querySelector('.kuantitas').value) || 1;
+        subtotal += harga * kuantitas;
+    });
+    const diskon = 0;
+    const total = subtotal - diskon;
+    document.getElementById('subtotal').textContent = `Rp ${subtotal.toLocaleString('id-ID')}`;
+    document.getElementById('diskon').textContent = `Rp ${diskon.toLocaleString('id-ID')}`;
+    document.getElementById('total').textContent = `Rp ${total.toLocaleString('id-ID')}`;
+}
+
+function restoreItem(item) {
+    itemCount++;
+    const jumlah = item.kuantitas || 1;
+    const itemHtml = `
+        <div class="item-row" id="item-${itemCount}">
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>${item.nama}</strong><br>
+                    <small>Rp ${Number(item.harga).toLocaleString('id-ID')}</small>
+                    <input type="hidden" class="layanan" name="layanan[]" value="${item.id_layanan}">
+                </div>
+                <div class="col-md-4">
+                    <input type="number" class="form-control kuantitas" name="kuantitas[]" value="${jumlah}" min="1" onchange="hitungTotal()">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-sm btn-danger" onclick="hapusItem(${itemCount})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <input type="hidden" class="parfum" name="parfum[]" value="${item.id_parfum || ''}">
+        </div>
+    `;
+    document.getElementById('itemsList').insertAdjacentHTML('beforeend', itemHtml);
+}
+
+document.querySelector('#tambahItemBtn')?.addEventListener('click', function() {
+    const category = document.getElementById('kategoriLayanan').value;
+    if (!category) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'alert alert-info mt-2';
+        placeholder.innerText = 'Pilih kategori layanan terlebih dahulu untuk menambahkan item.';
+        document.getElementById('itemsList').appendChild(placeholder);
+        setTimeout(() => placeholder.remove(), 1800);
+        return;
+    }
+    loadLayananByKategori(category);
+});
+
+document.getElementById('formTambahPelanggan')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const submitBtn = document.getElementById('submitBtnTambahPelanggan');
+    
+    const payload = {
+        nama: form.nama.value.trim(),
+        telepon: form.telepon.value.trim(),
+        email: form.email.value.trim(),
+        alamat: form.alamat.value.trim(),
+        jenis_kelamin: form.jenis_kelamin.value,
+    };
+    
+    const errorEl = document.getElementById('tambahPelangganError');
+    errorEl.textContent = '';
+    errorEl.style.display = 'none';
+
+    // Set loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner"></span>Menyimpan...';
+
+    fetch('{{ url_for('transaksi.api_create_pelanggan') }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json().then(data => ({ status: r.status, body: data })))
+    .then(response => {
+        if (response.status !== 200) {
+            errorEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> <span id="errorMessage">${response.body.error || 'Gagal membuat pelanggan baru.'}</span>`;
+            errorEl.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> Simpan Pelanggan';
+            showToast(response.body.error || 'Gagal membuat pelanggan baru', 'error');
+            return;
+        }
+        setSelectedPelanggan(response.body);
+        resetTambahPelangganForm();
+        showToast(`Pelanggan "${response.body.nama}" berhasil ditambahkan!`, 'success', 4000);
+    })
+    .catch((err) => {
+        errorEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> <span id="errorMessage">Terjadi kesalahan jaringan. Coba lagi.</span>';
+        errorEl.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Simpan Pelanggan';
+        showToast('Terjadi kesalahan jaringan', 'error');
+    });
+});
+
+restoredItems.forEach(restoreItem);
+hitungTotal();
+</script>
+{% endblock %}

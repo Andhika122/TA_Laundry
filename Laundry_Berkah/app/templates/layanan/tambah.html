@@ -1,0 +1,71 @@
+{% extends 'layout/base.html' %}
+{% set active_page = 'layanan' %}
+{% block title %}Tambah Layanan - Laundry Berkah{% endblock %}
+{% block page_title %}<i class="fas fa-plus-circle"></i> Tambah Layanan Baru{% endblock %}
+{% block styles %}
+<style>
+.form-label { font-weight: 600; color: #1e293b; margin-bottom: 8px; font-size: 14px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 700px;">
+    <div class="card-header">
+        <i class="fas fa-plus-circle"></i> Form Tambah Layanan
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('layanan.tambah') }}" novalidate>
+            <div class="form-group">
+                <label class="form-label">Nama Layanan <span style="color: var(--danger);">*</span></label>
+                <input type="text" class="form-control" name="nama" required placeholder="Contoh: Cuci Biasa" value="{{ form_data.get('nama', '') }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Harga <span style="color: var(--danger);">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text">Rp</span>
+                    <input type="number" class="form-control" name="harga" required min="0" step="100" placeholder="0" value="{{ form_data.get('harga', '') }}">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Durasi <span style="color: var(--danger);">*</span></label>
+                        <input type="number" class="form-control" name="durasi" required min="1" value="{{ form_data.get('durasi', '1') }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Satuan Durasi <span style="color: var(--danger);">*</span></label>
+                        <select class="form-select" name="durasi_unit" required>
+                            <option value="">-- Pilih Satuan --</option>
+                            {% for unit in durasi_unit_list %}
+                            <option value="{{ unit }}" {% if form_data.get('durasi_unit') == unit %}selected{% endif %}>{{ unit }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Kategori <span style="color: var(--danger);">*</span></label>
+                <select class="form-select" name="kategori" required>
+                    <option value="">-- Pilih Kategori --</option>
+                    {% for kat in kategori_list %}
+                    <option value="{{ kat }}" {% if form_data.get('kategori') == kat %}selected{% endif %}>{{ kat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Deskripsi</label>
+                <textarea class="form-control" name="deskripsi" rows="4" placeholder="Masukkan deskripsi layanan (opsional)">{{ form_data.get('deskripsi', '') }}</textarea>
+            </div>
+            <div class="form-group" style="margin-top: 30px;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Simpan Layanan
+                </button>
+                <a href="{{ url_for('layanan.index') }}" class="btn btn-secondary ms-2">
+                    <i class="fas fa-times"></i> Batal
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

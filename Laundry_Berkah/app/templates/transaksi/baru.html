@@ -1,7 +1,7 @@
 {% extends 'layout/base.html' %}
 {% set active_page = 'transaksi' %}
-{% block title %}Transaksi Baru - Laundry Berkah{% endblock %}
-{% block page_title %}<i class="fas fa-receipt"></i> Transaksi Baru{% endblock %}
+{% block title %}{% if edit_mode %}Edit Transaksi{% else %}Transaksi Baru{% endif %} - Laundry Berkah{% endblock %}
+{% block page_title %}<i class="fas fa-receipt"></i> {% if edit_mode %}Edit Transaksi{% else %}Transaksi Baru{% endif %}{% endblock %}
 {% block styles %}
 <style>
 .form-label { font-weight: 600; color: #1e293b; margin-bottom: 8px; font-size: 14px; }
@@ -225,7 +225,7 @@
     {% endif %}
 {% endwith %}
 
-<form method="POST" action="{{ url_for('transaksi.baru') }}" id="formTransaksi">
+<form method="POST" action="{% if edit_mode %}{{ url_for('transaksi.edit', id_transaksi=transaksi.id_transaksi) }}{% else %}{{ url_for('transaksi.baru') }}{% endif %}" id="formTransaksi">
     <div class="row">
         <div class="col-md-8">
             <div class="card">
@@ -351,9 +351,9 @@
             </div>
             <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
                 <button type="submit" class="btn btn-primary flex-grow-1">
-                    <i class="fas fa-save"></i> Buat Transaksi
+                    <i class="fas fa-save"></i> {% if edit_mode %}Simpan Perubahan{% else %}Buat Transaksi{% endif %}
                 </button>
-                <a href="{{ url_for('transaksi.index') }}" class="btn btn-secondary flex-grow-1">
+                <a href="{% if edit_mode %}{{ url_for('transaksi.detail', id_transaksi=transaksi.id_transaksi) }}{% else %}{{ url_for('transaksi.index') }}{% endif %}" class="btn btn-secondary flex-grow-1">
                     <i class="fas fa-times"></i> Batal
                 </a>
             </div>

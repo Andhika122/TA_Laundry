@@ -41,23 +41,27 @@ def build_selected_items(form_data):
     return selected_items
 
 
-def render_baru(form_data=None):
+def render_baru(form_data=None, selected_items=None, selected_pelanggan=None, edit_mode=False, transaksi=None):
     kategori_list = LayananService.get_kategori_list()
     promo_list = Promo.query.filter_by(is_active=True).all()
-    selected_pelanggan = None
     if form_data and form_data.get('id_pelanggan'):
         try:
             selected_pelanggan = db.session.get(Pelanggan, int(form_data.get('id_pelanggan')))
         except (TypeError, ValueError):
-            selected_pelanggan = None
+            selected_pelanggan = selected_pelanggan
+
+    if selected_items is None:
+        selected_items = build_selected_items(form_data)
 
     return render_template(
         'transaksi/baru.html',
         kategori_list=kategori_list,
         promo_list=promo_list,
         form_data=form_data or {},
-        selected_items=build_selected_items(form_data),
+        selected_items=selected_items,
         selected_pelanggan=selected_pelanggan,
+        edit_mode=edit_mode,
+        transaksi=transaksi,
         active_page='transaksi'
     )
 
@@ -169,6 +173,91 @@ def baru():
     return render_baru()
 
 
+@transaksi_bp.route('/edit/<int:id_transaksi>', methods=['GET', 'POST'])
+def edit(id_transaksi):
+    """Edit existing transaction"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    transaksi = TransaksiService.get_transaksi_by_id(id_transaksi)
+    if not transaksi:
+        flash('Transaksi tidak ditemukan', 'danger')
+        return redirect(url_for('transaksi.index'))
+
+    role = session.get('role')
+    if not TransaksiService.can_edit_transaksi(role, id_transaksi):
+        flash('Anda tidak memiliki izin untuk mengedit transaksi ini.', 'warning')
+        return redirect(url_for('transaksi.detail', id_transaksi=id_transaksi))
+
+    if request.method == 'POST':
+        form_data = request.form
+        try:
+            id_pelanggan = request.form.get('id_pelanggan', type=int)
+            catatan = request.form.get('catatan', '').strip()
+            promo_id = request.form.get('promo_id', type=int)
+
+            if not id_pelanggan:
+                flash('Pelanggan harus dipilih. Data lain tetap tersimpan, silakan pilih pelanggan.', 'danger')
+                return render_baru(form_data, selected_pelanggan=transaksi.pelanggan, edit_mode=True, transaksi=transaksi)
+
+            item_count = len(request.form.getlist('layanan[]'))
+            if item_count == 0:
+                flash('Minimal harus ada satu layanan dipilih. Silakan tambahkan layanan.', 'danger')
+                return render_baru(form_data, selected_pelanggan=transaksi.pelanggan, edit_mode=True, transaksi=transaksi)
+
+            items = []
+            layanan_ids = request.form.getlist('layanan[]')
+            kuantitas_list = request.form.getlist('kuantitas[]')
+            parfum_ids = request.form.getlist('parfum[]')
+
+            for i in range(item_count):
+                items.append({
+                    'id_layanan': int(layanan_ids[i]),
+                    'kuantitas': int(kuantitas_list[i]) if kuantitas_list[i] else 1,
+                    'id_parfum': int(parfum_ids[i]) if parfum_ids[i] else None
+                })
+
+            updated_transaksi = TransaksiService.update_transaksi(
+                id_transaksi=id_transaksi,
+                id_pelanggan=id_pelanggan,
+                items=items,
+                promo_id=promo_id if promo_id else None,
+                catatan=catatan
+            )
+
+            if updated_transaksi:
+                flash('Transaksi berhasil diperbarui', 'success')
+                return redirect(url_for('transaksi.detail', id_transaksi=id_transaksi))
+            else:
+                flash('Gagal memperbarui transaksi. Silakan periksa kembali data.', 'danger')
+                return render_baru(form_data, selected_pelanggan=transaksi.pelanggan, edit_mode=True, transaksi=transaksi)
+        except Exception as e:
+            flash(f'Data belum valid: {str(e)}. Silakan perbaiki input.', 'danger')
+            return render_baru(form_data, selected_pelanggan=transaksi.pelanggan, edit_mode=True, transaksi=transaksi)
+
+    selected_items = [
+        {
+            'id_layanan': detail.id_layanan,
+            'nama': detail.layanan.nama if detail.layanan else f'Layanan #{detail.id_layanan}',
+            'harga': float(detail.harga_satuan or 0),
+            'kuantitas': int(detail.kuantitas or 1),
+            'id_parfum': detail.id_parfum
+        }
+        for detail in transaksi.detail_transaksi
+    ]
+
+    return render_baru(
+        form_data={
+            'id_pelanggan': transaksi.id_pelanggan,
+            'catatan': transaksi.catatan or ''
+        },
+        selected_items=selected_items,
+        selected_pelanggan=transaksi.pelanggan,
+        edit_mode=True,
+        transaksi=transaksi
+    )
+
+
 @transaksi_bp.route('/detail/<int:id_transaksi>')
 def detail(id_transaksi):
     """View transaction detail"""
@@ -193,6 +282,9 @@ def detail(id_transaksi):
         receipt_print_url = url_for('pembayaran.struk_transaksi', id_transaksi=id_transaksi)
 
     whatsapp_chat_url = build_whatsapp_chat_url(transaksi.pelanggan.telepon)
+    role = session.get('role')
+    can_cancel = TransaksiService.can_cancel_transaksi(role, id_transaksi)
+
     return render_template(
         'transaksi/detail.html',
         transaksi=transaksi,
@@ -201,10 +293,34 @@ def detail(id_transaksi):
         can_advance=can_advance,
         receipt_print_url=receipt_print_url,
         whatsapp_chat_url=whatsapp_chat_url,
+        can_cancel=can_cancel,
+        role=role,
         active_page='transaksi'
     )
 
 
+@transaksi_bp.route('/cancel/<int:id_transaksi>', methods=['POST'])
+def cancel(id_transaksi):
+    """Cancel a transaction if permitted by the current role."""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    transaksi = TransaksiService.get_transaksi_by_id(id_transaksi)
+    if not transaksi:
+        flash('Transaksi tidak ditemukan', 'danger')
+        return redirect(url_for('transaksi.index'))
+
+    role = session.get('role')
+    if not TransaksiService.can_cancel_transaksi(role, id_transaksi):
+        flash('Anda tidak memiliki izin untuk membatalkan transaksi yang sudah dibayar lunas.', 'warning')
+        return redirect(url_for('transaksi.detail', id_transaksi=id_transaksi))
+
+    if TransaksiService.cancel_transaksi(id_transaksi):
+        flash('Transaksi berhasil dibatalkan.', 'success')
+    else:
+        flash('Gagal membatalkan transaksi. Silakan coba lagi.', 'danger')
+
+    return redirect(url_for('transaksi.index'))
 
 
 

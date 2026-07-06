@@ -2,10 +2,7 @@ from io import BytesIO
 import os
 import textwrap
 
-try:
-    import qrcode
-except ImportError:
-    qrcode = None
+# QR generation removed from receipt images
 
 
 def format_rupiah(amount):
@@ -97,7 +94,8 @@ def render_receipt_image(receipt_data):
     item_height = max(180, len(item_lines) * 48 + 80)
     summary_height = 170
     note_height = 90
-    track_height = 208
+    # QR tracking removed: do not allocate space for QR block
+    track_height = 0
 
     image_height = (
         padding
@@ -203,27 +201,7 @@ def render_receipt_image(receipt_data):
 
     current_y += note_height + section_gap
 
-    track_rect = [padding, current_y, max_width - padding, current_y + track_height]
-    draw.rounded_rectangle(track_rect, radius=28, fill='#FFFFFF')
-    draw.text((track_rect[0] + 28, track_rect[1] + 22), 'Lacak Laundry', fill='#0F172A', font=subtitle_font)
-    draw.text((track_rect[0] + 28, track_rect[1] + 58), 'Scan QR ini untuk melihat status proses laundry secara realtime.', fill='#64748B', font=small_font)
-
-    if receipt_data.get('tracking_url'):
-        draw.text((track_rect[0] + 28, track_rect[1] + 88), receipt_data.get('tracking_url'), fill='#2563EB', font=tiny_font)
-
-    qr_size = 156
-    qr_x = track_rect[2] - qr_size - 28
-    qr_y = track_rect[1] + 26
-    if qrcode and receipt_data.get('tracking_url'):
-        qr = qrcode.QRCode(box_size=4, border=2)
-        qr.add_data(receipt_data.get('tracking_url'))
-        qr.make(fit=True)
-        qr_img = qr.make_image(fill_color='black', back_color='white').convert('RGB')
-        qr_img = qr_img.resize((qr_size, qr_size), resample=getattr(Image, 'Resampling', Image).NEAREST)
-        image.paste(qr_img, (qr_x, qr_y))
-    else:
-        draw.rounded_rectangle([qr_x, qr_y, qr_x + qr_size, qr_y + qr_size], radius=22, outline='#E2E8F0', width=4)
-        _draw_qr_placeholder(draw, qr_x + 16, qr_y + 16, qr_size - 32)
+    # QR block removed per request
 
     output = BytesIO()
     image.save(output, format='PNG')

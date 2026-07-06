@@ -379,6 +379,105 @@ class TransaksiService:
             return []
 
     @staticmethod
+    def can_edit_transaksi(role, id_transaksi):
+        """Check whether the transaction may be edited by the current role."""
+        if role in ('Admin', 'Operator'):
+            return True
+        if role == 'Kasir':
+            transaksi = db.session.get(Transaksi, id_transaksi)
+            return transaksi is not None and transaksi.status_proses == 'Antrian'
+        return False
+
+    @staticmethod
+    def can_cancel_transaksi(role, id_transaksi):
+        """Check whether the transaction may be canceled/deleted by the current role."""
+        return role in ('Admin', 'Operator')
+
+    @staticmethod
+    def update_transaksi(id_transaksi, id_pelanggan, items, promo_id=None, catatan=''):
+        """Update existing transaction data and its detail items."""
+        try:
+            transaksi = db.session.get(Transaksi, id_transaksi)
+            if not transaksi:
+                return None
+
+            pelanggan = db.session.get(Pelanggan, id_pelanggan)
+            if not pelanggan:
+                return None
+
+            transaksi.id_pelanggan = id_pelanggan
+            transaksi.catatan = catatan
+
+            # Remove existing detail items and rebuild from new values.
+            for detail in list(transaksi.detail_transaksi):
+                db.session.delete(detail)
+
+            total_harga = Decimal('0')
+            max_duration = 0
+            max_duration_unit = 'hari'
+
+            for item in items:
+                layanan = db.session.get(Layanan, item['id_layanan'])
+                if not layanan:
+                    continue
+
+                harga_satuan = Decimal(str(layanan.harga))
+                harga_parfum = Decimal('0')
+                if item.get('id_parfum'):
+                    from app.models import Parfum
+                    parfum = db.session.get(Parfum, item['id_parfum'])
+                    if parfum:
+                        harga_parfum = Decimal(str(parfum.harga_tambahan))
+
+                kuantitas = Decimal(str(item.get('kuantitas', 1)))
+                subtotal = (harga_satuan + harga_parfum) * kuantitas
+
+                detail = DetailTransaksi(
+                    id_transaksi=transaksi.id_transaksi,
+                    id_layanan=item['id_layanan'],
+                    id_parfum=item.get('id_parfum'),
+                    kuantitas=kuantitas,
+                    harga_satuan=harga_satuan,
+                    harga_parfum=harga_parfum,
+                    subtotal=subtotal,
+                    catatan=item.get('catatan', '')
+                )
+                db.session.add(detail)
+                total_harga += subtotal
+
+                if layanan.durasi is not None:
+                    if layanan.durasi_unit == 'jam':
+                        duration_hours = int(layanan.durasi)
+                    else:
+                        duration_hours = int(layanan.durasi) * 24
+
+                    if duration_hours > max_duration:
+                        max_duration = duration_hours
+                        max_duration_unit = layanan.durasi_unit
+
+            if promo_id:
+                promo = db.session.get(Promo, promo_id)
+                if promo and promo.is_valid() and total_harga >= promo.minimal_transaksi:
+                    if promo.tipe == 'persentase':
+                        discount = total_harga * Decimal(str(promo.nilai)) / Decimal('100')
+                    else:
+                        discount = Decimal(str(promo.nilai))
+                    total_harga = max(total_harga - discount, Decimal('0'))
+
+            transaksi.total_harga = total_harga
+            if max_duration > 0:
+                transaksi.tanggal_selesai_estimasi = transaksi.tanggal_masuk + timedelta(hours=max_duration)
+            else:
+                transaksi.tanggal_selesai_estimasi = None
+
+            db.session.commit()
+            return transaksi
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error in update_transaksi: {str(e)}")
+            return None
+
+    @staticmethod
     def cancel_transaksi(id_transaksi):
         """Cancel transaksi (soft delete)"""
         try:

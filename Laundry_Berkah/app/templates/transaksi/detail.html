@@ -295,6 +295,32 @@
                     {% endif %}
                 </div>
             </div>
+            <div class="row g-2 mt-3">
+                <div class="col-md-6">
+                    {% if role in ['Admin', 'Operator'] or (role == 'Kasir' and transaksi.status_proses == 'Antrian') %}
+                    <a href="{{ url_for('transaksi.edit', id_transaksi=transaksi.id_transaksi) }}" class="btn btn-warning w-100">
+                        <i class="fas fa-edit"></i> Edit Transaksi
+                    </a>
+                    {% elif role == 'Kasir' %}
+                    <button type="button" class="btn btn-warning w-100" disabled>
+                        <i class="fas fa-edit"></i> Edit hanya saat Antrian
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    {% if can_cancel %}
+                    <form method="POST" action="{{ url_for('transaksi.cancel', id_transaksi=transaksi.id_transaksi) }}" onsubmit="return confirm('Yakin ingin membatalkan transaksi ini?');">
+                        <button type="submit" class="btn btn-danger w-100">
+                            <i class="fas fa-trash-alt"></i> Batalkan Transaksi
+                        </button>
+                    </form>
+                    {% elif role == 'Kasir' %}
+                    <button type="button" class="btn btn-danger w-100" disabled>
+                        <i class="fas fa-trash-alt"></i> Kasir tidak dapat membatalkan transaksi
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
             {% if payment_status and payment_status.status != 'Lunas' %}
             <div style="font-size: 14px; opacity: 0.92;">
                 Belum lunas. Sisa bayar: <strong>Rp {{ '{:,.0f}'.format(payment_status.remaining) }}</strong>

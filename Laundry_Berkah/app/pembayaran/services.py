@@ -61,10 +61,6 @@ class PembayaranService:
             
             db.session.add(pembayaran)
             
-            # Update transaksi status if fully paid
-            if status == 'Lunas':
-                transaksi.status_proses = 'Siap Ambil'
-            
             db.session.commit()
             return pembayaran
         except Exception as e:

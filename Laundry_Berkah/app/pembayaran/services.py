@@ -6,6 +6,7 @@ Layanan untuk CRUD operasi pembayaran dan status pembayaran
 from app.models import Pembayaran, Transaksi, db
 from datetime import datetime
 from decimal import Decimal
+from flask import current_app
 
 
 class PembayaranService:
@@ -264,6 +265,10 @@ class PembayaranService:
             item_total = sum(float(d.subtotal or 0) for d in transaksi.detail_transaksi)
 
             return {
+                'id_transaksi': transaksi.id_transaksi,
+                'merchant_name': current_app.config.get('MERCHANT_NAME', 'Laundry Berkah'),
+                'merchant_address': current_app.config.get('MERCHANT_ADDRESS', 'MFWQ+JW5, Sidorejo Lor, Sidorejo, Salatiga City, Central Java 50715'),
+                'merchant_phone': current_app.config.get('MERCHANT_PHONE', '087786181427'),
                 'nomor_struk': f"STR/{pembayaran.id_pembayaran}/{pembayaran.tanggal_pembayaran.strftime('%Y%m%d')}",
                 'nomor_transaksi': transaksi.nomor_transaksi,
                 'pelanggan_nama': pelanggan.nama,
@@ -320,6 +325,10 @@ class PembayaranService:
             item_total = sum(float(d.subtotal or 0) for d in transaksi.detail_transaksi)
 
             return {
+                'id_transaksi': transaksi.id_transaksi,
+                'merchant_name': current_app.config.get('MERCHANT_NAME', 'Laundry Berkah'),
+                'merchant_address': current_app.config.get('MERCHANT_ADDRESS', 'MFWQ+JW5, Sidorejo Lor, Sidorejo, Salatiga City, Central Java 50715'),
+                'merchant_phone': current_app.config.get('MERCHANT_PHONE', '087786181427'),
                 'nomor_struk': f"STR/{transaksi.nomor_transaksi}/{datetime.now().strftime('%Y%m%d')}",
                 'nomor_transaksi': transaksi.nomor_transaksi,
                 'pelanggan_nama': transaksi.pelanggan.nama,

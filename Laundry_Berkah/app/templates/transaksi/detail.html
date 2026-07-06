@@ -276,9 +276,14 @@
                     <div class="billing-amount">Rp {{ "{:,.0f}".format(transaksi.total_harga) }}</div>
                 </div>
                 <div class="billing-buttons">
-                    <a href="{{ url_for('pembayaran.struk_transaksi', id_transaksi=transaksi.id_transaksi) }}" class="btn btn-detail">
+                    <a href="{{ receipt_print_url }}" class="btn btn-detail">
                         <i class="fas fa-print"></i> Cetak Struk
                     </a>
+                    {% if whatsapp_chat_url %}
+                    <a href="{{ whatsapp_chat_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-detail" style="background: #25D366; color: white; border-color: #25D366;">
+                        <i class="fab fa-whatsapp"></i> Chat Pelanggan
+                    </a>
+                    {% endif %}
                     {% if payment_status and payment_status.status == 'Lunas' %}
                     <button class="btn btn-pay" disabled>
                         Lunas

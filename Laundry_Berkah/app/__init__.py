@@ -42,6 +42,12 @@ def create_app(config_name='development'):
 
     # Bind the shared SQLAlchemy extension to this app.
     db.init_app(app)
+
+    # Ensure Jinja templates can use Python builtins for pagination
+    app.jinja_env.globals.update({
+        'max': max,
+        'min': min,
+    })
     
     # Register error handlers
     register_error_handlers(app)

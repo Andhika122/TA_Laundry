@@ -1,0 +1,130 @@
+{% extends 'layout/base.html' %}
+{% set active_page = 'transaksi' %}
+{% block title %}Status Laundry - Laundry Berkah{% endblock %}
+{% block page_title %}<i class="fas fa-qrcode"></i> Status Laundry{% endblock %}
+{% block styles %}
+<style>
+.status-card {
+    border-radius: 24px;
+    padding: 28px;
+    background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 48%),
+                radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.12), transparent 42%),
+                #ffffff;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+}
+.step-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+    min-width: 115px;
+}
+.step-pill.active {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+}
+.step-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+}
+.status-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+.status-info .info-box {
+    border-radius: 18px;
+    padding: 18px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-8 col-lg-10">
+        {% if error %}
+            <div class="alert alert-danger" role="alert">
+                {{ error }}
+            </div>
+        {% else %}
+            <div class="card status-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+                        <div>
+                            <h2 class="h4 mb-2">Order #{{ transaksi.nomor_transaksi }}</h2>
+                            <p class="text-muted mb-1">Pelanggan: <strong>{{ transaksi.pelanggan.nama }}</strong></p>
+                            <p class="text-muted">Telepon: <strong>{{ transaksi.pelanggan.telepon }}</strong></p>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-primary text-white p-2" style="font-size: 0.95rem;">{{ transaksi.status_proses }}</span>
+                        </div>
+                    </div>
+
+                    <div class="status-info mb-4">
+                        <div class="info-box">
+                            <div class="text-uppercase text-muted" style="font-size: 12px; letter-spacing: 0.12em;">Tanggal Masuk</div>
+                            <div class="fw-bold mt-2">{{ transaksi.tanggal_masuk.strftime('%d %B %Y %H:%M') }}</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="text-uppercase text-muted" style="font-size: 12px; letter-spacing: 0.12em;">Estimasi Selesai</div>
+                            <div class="fw-bold mt-2">{{ transaksi.tanggal_selesai_estimasi.strftime('%d %B %Y %H:%M') if transaksi.tanggal_selesai_estimasi else '-' }}</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing: 0.08em;">Proses Saat Ini</h3>
+                        <div class="step-row">
+                            {% set statuses = ['Antrian', 'Cuci', 'Pengeringan', 'Setrika', 'Packing', 'Siap Ambil', 'Selesai'] %}
+                            {% for step in statuses %}
+                                <div class="step-pill {% if step == transaksi.status_proses %}active{% endif %}">
+                                    {{ step }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing: 0.08em;">Detail Transaksi</h3>
+                        <div class="row gx-3 gy-3">
+                            <div class="col-sm-6">
+                                <div class="info-box">
+                                    <div class="text-muted">Total Harga</div>
+                                    <div class="fw-bold">Rp {{ '{:,.0f}'.format(transaksi.total_harga) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="info-box">
+                                    <div class="text-muted">Status Pembayaran</div>
+                                    {% if payment_status %}
+                                        <div class="fw-bold">{{ payment_status.status }}</div>
+                                    {% else %}
+                                        <div class="fw-bold">Belum dibayar</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info d-flex align-items-center gap-3">
+                        <div><i class="fas fa-info-circle"></i></div>
+                        <div>
+                            Status ini dapat dilihat secara real-time setelah struk discan. Simpan QR dan bagikan kepada pelanggan agar proses laundry mudah dilacak.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

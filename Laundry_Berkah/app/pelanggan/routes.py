@@ -3,10 +3,11 @@ Pelanggan Module - Customer Management
 """
 from pathlib import Path
 
-from flask import Blueprint, render_template, redirect, url_for, request, jsonify, flash
+from flask import Blueprint, render_template, redirect, url_for, request, jsonify, flash, session
 from app.pelanggan.services import PelangganService
 from app.transaksi.services import TransaksiService
 from app.utils.auth import login_required, require_role
+from app.utils.whatsapp import build_whatsapp_chat_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 pelanggan_bp = Blueprint('pelanggan', __name__, template_folder=str(BASE_DIR / 'templates' / 'pelanggan'))
@@ -48,6 +49,10 @@ def index():
         per_page=per_page,
         search=search if search else None
     )
+    whatsapp_chat_map = {
+        p.id_pelanggan: build_whatsapp_chat_url(p.telepon)
+        for p in pelanggan_list
+    }
     
     return render_template(
         'pelanggan/pelanggan.html',
@@ -56,6 +61,7 @@ def index():
         total_pages=total_pages,
         current_page=page,
         search=search,
+        whatsapp_chat_map=whatsapp_chat_map,
         active_page='pelanggan'
     )
 
@@ -171,11 +177,13 @@ def detail(id_pelanggan):
     
     # Get customer transaction history
     riwayat_transaksi = TransaksiService.get_transaksi_by_pelanggan(id_pelanggan, limit=20)
+    whatsapp_chat_url = build_whatsapp_chat_url(pelanggan.telepon)
     
     return render_template(
         'pelanggan/detail.html', 
         pelanggan=pelanggan, 
         riwayat_transaksi=riwayat_transaksi,
+        whatsapp_chat_url=whatsapp_chat_url,
         active_page='pelanggan'
     )
 

@@ -97,8 +97,11 @@ class LayananService:
                     )
                 )
             
-            # Sort by nama
-            query = query.order_by(Layanan.nama.asc())
+            # Sort by kategori then nama
+            query = query.order_by(
+                Layanan.kategori.asc(),
+                Layanan.nama.asc()
+            )
             
             # Pagination
             paginated = query.paginate(page=page, per_page=per_page, error_out=False)

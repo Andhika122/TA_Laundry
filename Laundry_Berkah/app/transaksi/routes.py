@@ -9,6 +9,7 @@ from app.layanan.services import LayananService
 from app.pelanggan.services import PelangganService
 from app.pembayaran.services import PembayaranService
 from app.models import Layanan, Pelanggan, Promo, db
+from app.utils.whatsapp import build_whatsapp_chat_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 transaksi_bp = Blueprint('transaksi', __name__, template_folder=str(BASE_DIR / 'templates' / 'transaksi'))
@@ -80,11 +81,16 @@ def index():
         t.id_transaksi: PembayaranService.get_pembayaran_status(t.id_transaksi)
         for t in transaksi_list
     }
+    whatsapp_chat_map = {
+        t.id_transaksi: build_whatsapp_chat_url(t.pelanggan.telepon)
+        for t in transaksi_list
+    }
     
     return render_template(
         'transaksi/list.html',
         transaksi=transaksi_list,
         payment_status_map=payment_status_map,
+        whatsapp_chat_map=whatsapp_chat_map,
         total_count=total_count,
         total_pages=total_pages,
         current_page=page,
@@ -178,17 +184,48 @@ def detail(id_transaksi):
     next_status = TransaksiService.get_next_status(id_transaksi)
     can_advance = bool(next_status and (next_status != 'Selesai' or (payment_status and payment_status.get('status') == 'Lunas')))
 
+    latest_payment = PembayaranService.get_pembayaran_by_transaksi(id_transaksi)
+    receipt_print_url = None
+    if latest_payment:
+        latest_pembayaran = latest_payment[0]
+        receipt_print_url = url_for('pembayaran.struk', id_pembayaran=latest_pembayaran.id_pembayaran)
+    else:
+        receipt_print_url = url_for('pembayaran.struk_transaksi', id_transaksi=id_transaksi)
+
+    whatsapp_chat_url = build_whatsapp_chat_url(transaksi.pelanggan.telepon)
     return render_template(
         'transaksi/detail.html',
         transaksi=transaksi,
         payment_status=payment_status,
         next_status=next_status,
         can_advance=can_advance,
+        receipt_print_url=receipt_print_url,
+        whatsapp_chat_url=whatsapp_chat_url,
         active_page='transaksi'
     )
 
 
 
+
+
+@transaksi_bp.route('/nota')
+def public_status():
+    """Public status page for laundry tracking via QR."""
+    id_transaksi = request.args.get('id', type=int)
+    if not id_transaksi:
+        return render_template('transaksi/public_status.html', error='Transaksi tidak ditemukan.', transaksi=None, payment_status=None)
+
+    transaksi = TransaksiService.get_transaksi_by_id(id_transaksi)
+    if not transaksi:
+        return render_template('transaksi/public_status.html', error='Transaksi tidak ditemukan.', transaksi=None, payment_status=None)
+
+    payment_status = PembayaranService.get_pembayaran_status(id_transaksi)
+    return render_template(
+        'transaksi/public_status.html',
+        transaksi=transaksi,
+        payment_status=payment_status,
+        error=None
+    )
 
 
 @transaksi_bp.route('/api/layanan/<kategori>')

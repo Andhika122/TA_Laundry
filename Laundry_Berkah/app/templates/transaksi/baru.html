@@ -125,6 +125,59 @@
     to { transform: rotate(360deg); }
 }
 
+.payment-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.payment-option {
+    display: flex;
+    align-items: center;
+    padding: 18px 16px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.payment-option.active,
+.payment-option:hover {
+    border-color: rgba(59, 130, 246, 0.35);
+    box-shadow: 0 16px 30px rgba(59, 130, 246, 0.12);
+}
+
+.payment-option-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.option-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.option-title {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.option-subtitle {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+.payment-note {
+    margin-top: 14px;
+    font-size: 13px;
+    color: #64748b;
+}
+
 .add-customer-btn {
     display: flex;
     align-items: center;
@@ -275,15 +328,25 @@
                     <i class="fas fa-wallet"></i> Metode Pembayaran
                 </div>
                 <div class="card-body">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="payment_option" id="payLater" value="pay_later" checked>
-                        <label class="form-check-label" for="payLater">Bayar Nanti</label>
+                    <div class="payment-toggle">
+                        <label class="payment-option active" for="payLater" id="labelPayLater">
+                            <input class="payment-option-input" type="radio" name="payment_option" id="payLater" value="pay_later" checked>
+                            <div class="option-content">
+                                <div class="option-title">Bayar Nanti</div>
+                                <div class="option-subtitle">Bayar setelah layanan selesai atau ketika penjemputan.</div>
+                            </div>
+                        </label>
+                        <label class="payment-option" for="payNow" id="labelPayNow">
+                            <input class="payment-option-input" type="radio" name="payment_option" id="payNow" value="pay_now">
+                            <div class="option-content">
+                                <div class="option-title">Bayar Sekarang</div>
+                                <div class="option-subtitle">Lunas otomatis dan jumlah bayar set ke total transaksi.</div>
+                            </div>
+                        </label>
                     </div>
-                    <div class="form-check mt-2">
-                        <input class="form-check-input" type="radio" name="payment_option" id="payNow" value="pay_now">
-                        <label class="form-check-label" for="payNow">Bayar Sekarang (Lunas otomatis)</label>
+                    <div class="text-muted payment-note">
+                        Pilih opsi pembayaran yang paling nyaman untuk pelanggan.
                     </div>
-                    <small class="text-muted">Jika pilih Bayar Sekarang, transaksi akan langsung dianggap lunas dan jumlah bayar otomatis set ke total transaksi.</small>
                 </div>
             </div>
             <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
@@ -563,6 +626,14 @@ document.querySelector('#tambahItemBtn')?.addEventListener('click', function() {
         return;
     }
     loadLayananByKategori(category);
+});
+
+document.querySelectorAll('.payment-option-input').forEach((radio) => {
+    radio.addEventListener('change', (event) => {
+        document.querySelectorAll('.payment-option').forEach((option) => {
+            option.classList.toggle('active', option.querySelector('input') === event.target);
+        });
+    });
 });
 
 document.getElementById('formTambahPelanggan')?.addEventListener('submit', function(e) {

@@ -1,6 +1,6 @@
 """
 Flask Configuration
-Database: SQLite for local development, TiDB/MySQL for production
+Database: TiDB/MySQL by default, SQLite only for explicit fallback or testing
 """
 import os
 from datetime import timedelta
@@ -50,16 +50,6 @@ def get_database_uri():
     if is_testing_environment():
         return 'sqlite:///:memory:'
     if should_use_sqlite_fallback():
-        return get_sqlite_uri()
-    if os.getenv('TIDB_DB'):
-        return build_tidb_uri(
-            os.getenv('TIDB_USER', 'root'),
-            os.getenv('TIDB_PASSWORD', ''),
-            os.getenv('TIDB_HOST', 'localhost'),
-            os.getenv('TIDB_PORT', '4000'),
-            os.getenv('TIDB_DB', 'db_laundry'),
-        )
-    if os.getenv('FLASK_ENV', 'development').lower() != 'production':
         return get_sqlite_uri()
 
     return build_tidb_uri(
@@ -149,6 +139,11 @@ class Config:
     RESEND_API_KEY = os.getenv('RESEND_API_KEY')
     RESEND_FROM_EMAIL = os.getenv('RESEND_FROM_EMAIL')
     CONTACT_RECIPIENT_EMAIL = os.getenv('CONTACT_RECIPIENT_EMAIL')
+
+    # Merchant information for receipts
+    MERCHANT_NAME = os.getenv('MERCHANT_NAME', 'Laundry Berkah')
+    MERCHANT_ADDRESS = os.getenv('MERCHANT_ADDRESS', 'MFWQ+JW5, Sidorejo Lor, Sidorejo, Salatiga City, Central Java 50715')
+    MERCHANT_PHONE = os.getenv('MERCHANT_PHONE', '087786181427')
     
     # Admin Credentials
     ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')

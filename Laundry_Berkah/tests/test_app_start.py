@@ -18,7 +18,7 @@ def app(monkeypatch):
     return test_app
 
 
-def test_development_uses_local_sqlite_by_default(monkeypatch):
+def test_development_uses_tidb_by_default(monkeypatch):
     monkeypatch.setenv("FLASK_ENV", "development")
     monkeypatch.setenv("TIDB_HOST", "127.0.0.1")
     monkeypatch.setenv("TIDB_PORT", "4000")
@@ -32,8 +32,8 @@ def test_development_uses_local_sqlite_by_default(monkeypatch):
 
     app_config = config_module.config["development"]
 
-    assert app_config.SQLALCHEMY_DATABASE_URI.startswith("sqlite:///")
-    assert app_config.SQLALCHEMY_DATABASE_URI.endswith("/instance/laundry.db")
+    assert app_config.SQLALCHEMY_DATABASE_URI.startswith("mysql+pymysql://")
+    assert "sqlite" not in app_config.SQLALCHEMY_DATABASE_URI
 
 
 def test_production_uses_tidb_mysql_by_default(monkeypatch):

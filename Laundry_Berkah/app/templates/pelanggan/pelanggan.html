@@ -75,10 +75,16 @@
                                     <a href="{{ url_for('pelanggan.detail', id_pelanggan=p.id_pelanggan) }}" class="btn btn-sm btn-outline-info" title="Lihat">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{{ url_for('pelanggan.edit', id_pelanggan=p.id_pelanggan) }}" class="btn btn-sm btn-outline-warning" title="Edit">
+                                    {% set chat_url = whatsapp_chat_map.get(p.id_pelanggan) %}
+                                    {% if chat_url %}
+                                    <a href="{{ chat_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-success ms-1" title="Chat WA">
+                                        <i class="fab fa-whatsapp"></i>
+                                    </a>
+                                    {% endif %}
+                                    <a href="{{ url_for('pelanggan.edit', id_pelanggan=p.id_pelanggan) }}" class="btn btn-sm btn-outline-warning ms-1" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete({{ p.id_pelanggan }})" title="Hapus">
+                                    <button class="btn btn-sm btn-outline-danger ms-1" onclick="confirmDelete({{ p.id_pelanggan }})" title="Hapus">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>

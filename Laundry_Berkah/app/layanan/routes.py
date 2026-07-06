@@ -11,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 layanan_bp = Blueprint('layanan', __name__, template_folder=str(BASE_DIR / 'templates' / 'layanan'))
 
 
-KATEGORI_LIST = ['Cuci', 'Setrika', 'Kering']
+KATEGORI_LIST = ['Charge Tambahan', 'Cuci Kering Lipat', 'Cuci Kering Setrika', 'Cuci Kering','Lainnya','Boneka']
 DURASI_UNIT_LIST = ['jam', 'hari']
 
 

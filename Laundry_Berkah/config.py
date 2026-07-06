@@ -11,7 +11,6 @@ load_dotenv()
 
 BASE_DIR = os.path.dirname(__file__)
 INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
-os.makedirs(INSTANCE_DIR, exist_ok=True)
 
 _CONFIG_IMPORTED = False
 
@@ -31,6 +30,7 @@ def should_use_sqlite_fallback():
 
 def get_sqlite_uri(filename='laundry.db'):
     """Return a SQLite URI stored inside the Flask instance folder."""
+    os.makedirs(INSTANCE_DIR, exist_ok=True)
     database_path = os.path.join(INSTANCE_DIR, filename)
     return f"sqlite:///{database_path.replace(os.sep, '/')}"
 

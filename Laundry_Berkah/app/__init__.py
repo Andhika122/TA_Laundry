@@ -263,16 +263,26 @@ def register_error_handlers(app):
 def setup_logging(app):
     """Setup application logging"""
     if not app.debug:
-        # Create logs directory if it doesn't exist
-        if not os.path.exists('logs'):
-            os.mkdir('logs')
-        
-        # Create rotating file handler
-        file_handler = RotatingFileHandler(
-            'logs/laundry_berkah.log',
-            maxBytes=10240000,
-            backupCount=10
-        )
+        # Use a writable logs directory when possible.
+        log_dir = os.getenv('LOG_DIR', None)
+        if not log_dir:
+            log_dir = '/tmp/logs' if os.name != 'nt' else os.path.join(os.getcwd(), 'logs')
+        try:
+            os.makedirs(log_dir, exist_ok=True)
+            log_path = os.path.join(log_dir, 'laundry_berkah.log')
+            file_handler = RotatingFileHandler(
+                log_path,
+                maxBytes=10240000,
+                backupCount=10
+            )
+            file_handler.setFormatter(logging.Formatter(
+                '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+            ))
+            file_handler.setLevel(logging.INFO)
+            app.logger.addHandler(file_handler)
+        except OSError:
+            # If the filesystem is read-only or not writable, skip file logging.
+            pass
         
         # Set logging format
         file_handler.setFormatter(logging.Formatter(

@@ -121,7 +121,10 @@ class Config:
     elif USE_SQLITE_FALLBACK:
         SQLALCHEMY_DATABASE_URI = get_sqlite_uri()
     elif FLASK_ENV == 'production' and not SQLALCHEMY_DATABASE_URI.startswith('mysql'):
-        raise RuntimeError('Production database must use TiDB/MySQL or a DATABASE_URL value.')
+        raise RuntimeError(
+            'Production deployment must use TiDB/MySQL via DATABASE_URL or TIDB_* environment variables. '
+            'SQLite fallback is disabled.'
+        )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = get_engine_options(SQLALCHEMY_DATABASE_URI)
     

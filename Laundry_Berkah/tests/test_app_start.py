@@ -72,6 +72,25 @@ def test_sqlite_fallback_uses_local_file(monkeypatch):
     assert app_config.SQLALCHEMY_DATABASE_URI.endswith("/instance/laundry.db")
 
 
+def test_vercel_production_uses_tidb_when_configured(monkeypatch):
+    monkeypatch.setenv("FLASK_ENV", "production")
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("USE_SQLITE_FALLBACK", raising=False)
+    monkeypatch.setenv("TIDB_HOST", "127.0.0.1")
+    monkeypatch.setenv("TIDB_PORT", "4000")
+    monkeypatch.setenv("TIDB_USER", "root")
+    monkeypatch.setenv("TIDB_PASSWORD", "")
+    monkeypatch.setenv("TIDB_DB", "test_db")
+
+    import config as config_module
+    config_module = importlib.reload(config_module)
+
+    app_config = config_module.config["production"]
+
+    assert app_config.SQLALCHEMY_DATABASE_URI.startswith("mysql+pymysql://")
+
+
 def test_login_page_is_accessible(client):
     response = client.get("/auth/login")
 

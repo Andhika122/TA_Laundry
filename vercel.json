@@ -11,5 +11,10 @@
       "src": "/(.*)",
       "dest": "api/index.py"
     }
-  ]
+  ],
+  "env": {
+    "FLASK_ENV": "production",
+    "USE_SQLITE_FALLBACK": "false",
+    "VERCEL": "1"
+  }
 }

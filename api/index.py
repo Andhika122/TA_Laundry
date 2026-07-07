@@ -10,9 +10,11 @@ for path in [PROJECT_ROOT, APP_FOLDER]:
     if path not in sys.path:
         sys.path.insert(0, path)
 
-# Load environment variables
-load_dotenv(os.path.join(PROJECT_ROOT, '.env'))
-load_dotenv(os.path.join(APP_FOLDER, '.env'))
+# Load environment variables only when not running on Vercel.
+# Local dotenv files should not override Vercel production environment vars.
+if os.getenv('VERCEL', '').strip() != '1':
+    load_dotenv(os.path.join(PROJECT_ROOT, '.env'))
+    load_dotenv(os.path.join(APP_FOLDER, '.env'))
 
 # Attempt to load the real Flask app. If anything goes wrong, we expose a
 # minimal WSGI fallback that returns a 500 and prints the original traceback

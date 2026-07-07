@@ -272,6 +272,7 @@ def setup_logging(app):
         log_dir = os.getenv('LOG_DIR', None)
         if not log_dir:
             log_dir = '/tmp/logs' if os.name != 'nt' else os.path.join(os.getcwd(), 'logs')
+        file_handler = None
         try:
             os.makedirs(log_dir, exist_ok=True)
             log_path = os.path.join(log_dir, 'laundry_berkah.log')
@@ -280,26 +281,23 @@ def setup_logging(app):
                 maxBytes=10240000,
                 backupCount=10
             )
-            file_handler.setFormatter(logging.Formatter(
+            formatter = logging.Formatter(
                 '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-            ))
+            )
+            file_handler.setFormatter(formatter)
             file_handler.setLevel(logging.INFO)
             app.logger.addHandler(file_handler)
         except OSError:
             # If the filesystem is read-only or not writable, skip file logging.
-            pass
+            file_handler = None
         app.logger.setLevel(logging.INFO)
-        app.logger.info('Laundry Berkah startup')
-        
-        # Set logging format
-        file_handler.setFormatter(logging.Formatter(
-            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-        ))
-        
-        # Set logging level
-        file_handler.setLevel(logging.INFO)
-        app.logger.addHandler(file_handler)
-        app.logger.setLevel(logging.INFO)
+        if file_handler is None:
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(logging.Formatter(
+                '%(asctime)s %(levelname)s: %(message)s'
+            ))
+            console_handler.setLevel(logging.INFO)
+            app.logger.addHandler(console_handler)
         app.logger.info('Laundry Berkah startup')
 
 

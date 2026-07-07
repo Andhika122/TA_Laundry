@@ -7,10 +7,13 @@ from datetime import timedelta
 from dotenv import load_dotenv
 from urllib.parse import quote_plus
 
-load_dotenv()
-
 BASE_DIR = os.path.dirname(__file__)
+ROOT_DIR = os.path.dirname(BASE_DIR)
 INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
+
+if os.getenv('VERCEL', '').strip() != '1':
+    load_dotenv(os.path.join(ROOT_DIR, '.env'))
+    load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 _CONFIG_IMPORTED = False
 

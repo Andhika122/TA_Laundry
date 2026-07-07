@@ -114,6 +114,17 @@ def get_engine_options(database_uri=None):
 
         # If ssl_ca is provided (either a path or the temp file), use it
         if ssl_ca:
+            # If the given value is a path, ensure it exists. If it does not,
+            # raise a clear RuntimeError so the deployment log shows actionable
+            # guidance (e.g. use TIDB_SSL_CA_CONTENT on Vercel instead of a
+            # local filesystem path).
+            if not os.path.exists(ssl_ca):
+                raise RuntimeError(
+                    "TIDB_SSL_CA file not found: '%s'. On serverless environments "
+                    "like Vercel you must provide the certificate PEM text via "
+                    "the TIDB_SSL_CA_CONTENT environment variable (do not set a "
+                    "local file path)." % ssl_ca
+                )
             options['connect_args'] = {'ssl_ca': ssl_ca}
     else:
         options = {'echo': env_flag('SQLALCHEMY_ECHO')}

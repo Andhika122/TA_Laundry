@@ -44,39 +44,39 @@ auth_bp = Blueprint('auth', __name__, template_folder=str(BASE_DIR / 'templates'
 def login():
     """Login page"""
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        # Validate input
-        if not username or not password:
-            flash('Username dan password harus diisi', 'danger')
-            return redirect(url_for('auth.login'))
-        
-        if username == current_app.config.get('ADMIN_USERNAME', 'admin'):
-            _ensure_login_defaults()
-
         try:
+            username = request.form.get('username')
+            password = request.form.get('password')
+
+            # Validate input
+            if not username or not password:
+                flash('Username dan password harus diisi', 'danger')
+                return redirect(url_for('auth.login'))
+
+            if username == current_app.config.get('ADMIN_USERNAME', 'admin'):
+                _ensure_login_defaults()
+
             # Find user
             user = User.query.filter_by(username=username).first()
+
+            if user and user.check_password(password) and getattr(user, 'status', True):
+                # Set session
+                session['user_id'] = user.id_user
+                session['username'] = user.username
+                session['role'] = user.role.nama if user.role else None
+                session.permanent = True
+
+                flash(f'Selamat datang, {user.nama_lengkap or user.username}!', 'success')
+                user_role = session.get('role')
+                if user_role == 'Kasir':
+                    return redirect(url_for('dashboard.dashboard'))
+                return redirect(url_for('dashboard.dashboard'))
+            else:
+                flash('Username atau password salah', 'danger')
         except Exception as exc:
-            current_app.logger.exception('Login query failed')
+            current_app.logger.exception('Unhandled exception in login')
             flash('Terjadi kesalahan saat memproses login. Silakan coba lagi nanti.', 'danger')
             return redirect(url_for('auth.login'))
-        
-        if user and user.check_password(password) and getattr(user, 'status', True):
-            # Set session
-            session['user_id'] = user.id_user
-            session['username'] = user.username
-            session['role'] = user.role.nama if user.role else None
-            session.permanent = True
-            
-            flash(f'Selamat datang, {user.nama_lengkap or user.username}!', 'success')
-            user_role = session.get('role')
-            if user_role == 'Kasir':
-                return redirect(url_for('dashboard.dashboard'))
-            return redirect(url_for('dashboard.dashboard'))
-        else:
-            flash('Username atau password salah', 'danger')
     
     return render_template('login.html')
 

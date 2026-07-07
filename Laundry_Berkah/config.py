@@ -91,6 +91,8 @@ def get_engine_options(database_uri=None):
         }
         ssl_ca = os.getenv('TIDB_SSL_CA')
         ssl_ca_content = os.getenv('TIDB_SSL_CA_CONTENT')
+
+        # Allow either: path in TIDB_SSL_CA, PEM content in TIDB_SSL_CA, or content in TIDB_SSL_CA_CONTENT
         if ssl_ca_content:
             import tempfile
 
@@ -100,6 +102,17 @@ def get_engine_options(database_uri=None):
             temp_file.close()
             ssl_ca = temp_file.name
 
+        elif ssl_ca and '-----BEGIN CERTIFICATE-----' in ssl_ca:
+            # TIDB_SSL_CA contains PEM content directly
+            import tempfile
+
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pem')
+            temp_file.write(ssl_ca.encode('utf-8'))
+            temp_file.flush()
+            temp_file.close()
+            ssl_ca = temp_file.name
+
+        # If ssl_ca is provided (either a path or the temp file), use it
         if ssl_ca:
             options['connect_args'] = {'ssl_ca': ssl_ca}
     else:

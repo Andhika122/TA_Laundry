@@ -66,6 +66,10 @@ def create_app(config_name='development'):
             db.create_all()
             ensure_database_schema(app)
             seed_default_data(app)
+            # Check DB connectivity; fail fast in production if configured to require TiDB
+            db_ok = check_database_connection(app)
+            if not db_ok and app.config.get('FLASK_ENV') == 'production' and not app.config.get('USE_SQLITE_FALLBACK'):
+                raise RuntimeError('Database connectivity check failed in production environment')
         except Exception as exc:
             app.logger.warning('Database initialization skipped: %s', exc)
     
@@ -325,3 +329,24 @@ def register_cli_commands(app):
         if click.confirm('Are you sure you want to drop all tables?'):
             db.drop_all()
             click.echo('[OK] All tables dropped')
+
+
+def check_database_connection(app):
+    """Perform a lightweight database health check and log the result.
+
+    Returns True if the test query succeeds, False otherwise. In production,
+    a failure will be logged at ERROR level so Vercel logs include details.
+    """
+    try:
+        with app.app_context():
+            # Use a simple SELECT 1 for MySQL/TiDB and SQLite compatibility
+            result = db.session.execute(text('SELECT 1')).scalar()
+            app.logger.info('Database connectivity check succeeded: %s', result)
+            return True
+    except Exception as exc:
+        try:
+            app.logger.exception('Database connectivity check failed: %s', exc)
+        except Exception:
+            # Logging may itself fail in certain environments; ignore
+            pass
+        return False

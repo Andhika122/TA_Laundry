@@ -184,10 +184,28 @@ class LayananService:
         Returns: list of Layanan
         """
         try:
-            return Layanan.query.filter_by(
+            # Coba cari exact match dulu (case-sensitive as stored)
+            results = Layanan.query.filter_by(
                 kategori=kategori,
                 is_active=True
             ).order_by(Layanan.nama.asc()).all()
+
+            # Jika tidak ada hasil, coba pencarian case-insensitive / substring
+            if not results:
+                try:
+                    from sqlalchemy import func
+                    results = Layanan.query.filter(
+                        func.lower(Layanan.kategori).like(func.lower(f"%{kategori}%")),
+                        Layanan.is_active == True
+                    ).order_by(Layanan.nama.asc()).all()
+                except Exception:
+                    # Fallback ke ILIKE jika dialect mendukung
+                    results = Layanan.query.filter(
+                        Layanan.kategori.ilike(f"%{kategori}%"),
+                        Layanan.is_active == True
+                    ).order_by(Layanan.nama.asc()).all()
+
+            return results
         except Exception as e:
             print(f"Error in get_layanan_by_kategori: {str(e)}")
             return []

@@ -28,7 +28,9 @@ def is_testing_environment():
 
 
 def should_use_sqlite_fallback():
-    return env_flag('USE_SQLITE_FALLBACK')
+    # Disable SQLite fallback for normal environments to enforce TiDB usage.
+    # Allow fallback only in explicit testing environments.
+    return is_testing_environment() and env_flag('USE_SQLITE_FALLBACK')
 
 
 def get_sqlite_uri(filename='laundry.db'):

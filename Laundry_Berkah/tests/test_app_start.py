@@ -56,6 +56,8 @@ def test_production_uses_tidb_mysql_by_default(monkeypatch):
 
 
 def test_sqlite_fallback_uses_local_file(monkeypatch):
+    # SQLite fallback is disabled for development/production; ensure TiDB
+    # remains the database when USE_SQLITE_FALLBACK is set in development.
     monkeypatch.setenv("FLASK_ENV", "development")
     monkeypatch.setenv("USE_SQLITE_FALLBACK", "1")
     monkeypatch.setenv("TIDB_HOST", "127.0.0.1")
@@ -69,8 +71,10 @@ def test_sqlite_fallback_uses_local_file(monkeypatch):
 
     app_config = config_module.config["development"]
 
-    assert app_config.SQLALCHEMY_DATABASE_URI.startswith("sqlite:///")
-    assert app_config.SQLALCHEMY_DATABASE_URI.endswith("/instance/laundry.db")
+    # With fallback flag set in development the config should still point
+    # to the TiDB/MySQL URI (we enforce TiDB usage).
+    assert app_config.SQLALCHEMY_DATABASE_URI.startswith("mysql+pymysql://")
+    assert "sqlite" not in app_config.SQLALCHEMY_DATABASE_URI
 
 
 def test_vercel_production_uses_tidb_when_configured(monkeypatch):

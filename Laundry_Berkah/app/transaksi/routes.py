@@ -347,9 +347,9 @@ def public_status():
 @transaksi_bp.route('/api/layanan/<kategori>')
 def api_layanan_by_kategori(kategori):
     """API endpoint untuk ambil layanan berdasarkan kategori"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
+    # Allow public access to layanan list so frontend can fetch available
+    # services without requiring user login. This endpoint only returns
+    # non-sensitive read-only data.
     layanan_list = LayananService.get_layanan_by_kategori(kategori)
     
     result = [

@@ -159,8 +159,8 @@ def get_engine_options(database_uri=None):
             if resolved_ssl_ca and os.path.exists(resolved_ssl_ca):
                 options['connect_args'] = {'ssl_ca': resolved_ssl_ca}
             elif os.getenv('VERCEL', '').strip() == '1':
-                # Serverless environments may not have a writable local path for the CA file.
-                # Skip the explicit ssl_ca override and let the runtime use its trusted CA bundle.
+                # Vercel can use the platform CA bundle. Skip the local file override
+                # so the function can still connect to TiDB.
                 options['connect_args'] = {}
             else:
                 raise RuntimeError(

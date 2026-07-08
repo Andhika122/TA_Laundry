@@ -19,3 +19,4 @@ cloudinary==1.36.0
 resend==2.0.0
 PyMySQL==1.1.1
 openpyxl==3.1.2
+fpdf==1.7.2

@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api/index.py"
+    }
+  ],
+  "env": {
+    "FLASK_ENV": "production",
+    "USE_SQLITE_FALLBACK": "false",
+    "VERCEL": "1",
+    "UPLOAD_FOLDER": "/tmp/uploads",
+    "LOG_DIR": "/tmp/logs"
+  }
+}

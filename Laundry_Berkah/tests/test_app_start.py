@@ -1,4 +1,5 @@
 import importlib
+import os
 import pytest
 
 
@@ -89,6 +90,27 @@ def test_vercel_production_uses_tidb_when_configured(monkeypatch):
     app_config = config_module.config["production"]
 
     assert app_config.SQLALCHEMY_DATABASE_URI.startswith("mysql+pymysql://")
+
+
+def test_ssl_ca_path_resolves_from_project_root(monkeypatch):
+    monkeypatch.setenv("FLASK_ENV", "production")
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("USE_SQLITE_FALLBACK", raising=False)
+    monkeypatch.setenv("TIDB_HOST", "127.0.0.1")
+    monkeypatch.setenv("TIDB_PORT", "4000")
+    monkeypatch.setenv("TIDB_USER", "root")
+    monkeypatch.setenv("TIDB_PASSWORD", "")
+    monkeypatch.setenv("TIDB_DB", "test_db")
+    monkeypatch.setenv("TIDB_SSL_CA", "CA.pem")
+
+    import config as config_module
+    config_module = importlib.reload(config_module)
+
+    options = config_module.get_engine_options("mysql+pymysql://root:@127.0.0.1:4000/test_db")
+
+    assert "connect_args" in options
+    assert os.path.exists(options["connect_args"]["ssl_ca"])
 
 
 def test_login_page_is_accessible(client):

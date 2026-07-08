@@ -81,6 +81,45 @@ def get_database_uri():
     )
 
 
+def resolve_ssl_ca_path(ssl_ca):
+    """Resolve an SSL CA path from env, including project-root fallback."""
+    if not ssl_ca:
+        return None
+
+    if '-----BEGIN CERTIFICATE-----' in ssl_ca:
+        return ssl_ca
+
+    candidates = []
+    if ssl_ca:
+        candidates.append(ssl_ca)
+
+    normalized = ssl_ca.replace('\\', '/')
+    basename = os.path.basename(normalized)
+
+    if basename:
+        candidates.extend([
+            os.path.join(os.getcwd(), basename),
+            os.path.join(BASE_DIR, basename),
+            os.path.join(ROOT_DIR, basename),
+        ])
+
+    if not os.path.isabs(ssl_ca):
+        candidates.extend([
+            os.path.join(os.getcwd(), ssl_ca),
+            os.path.join(BASE_DIR, ssl_ca),
+            os.path.join(ROOT_DIR, ssl_ca),
+        ])
+
+    seen = set()
+    for candidate in candidates:
+        if candidate and candidate not in seen:
+            seen.add(candidate)
+            if os.path.exists(candidate):
+                return candidate
+
+    return ssl_ca
+
+
 def get_engine_options(database_uri=None):
     """Build SQLAlchemy engine options for the active database backend."""
     database_uri = database_uri or get_database_uri()
@@ -115,20 +154,21 @@ def get_engine_options(database_uri=None):
             temp_file.close()
             ssl_ca = temp_file.name
 
-        # If ssl_ca is provided (either a path or the temp file), use it
         if ssl_ca:
-            # If the given value is a path, ensure it exists. If it does not,
-            # raise a clear RuntimeError so the deployment log shows actionable
-            # guidance (e.g. use TIDB_SSL_CA_CONTENT on Vercel instead of a
-            # local filesystem path).
-            if not os.path.exists(ssl_ca):
+            resolved_ssl_ca = resolve_ssl_ca_path(ssl_ca)
+            if resolved_ssl_ca and os.path.exists(resolved_ssl_ca):
+                options['connect_args'] = {'ssl_ca': resolved_ssl_ca}
+            elif os.getenv('VERCEL', '').strip() == '1':
+                # Serverless environments may not have a writable local path for the CA file.
+                # Skip the explicit ssl_ca override and let the runtime use its trusted CA bundle.
+                options['connect_args'] = {}
+            else:
                 raise RuntimeError(
                     "TIDB_SSL_CA file not found: '%s'. On serverless environments "
                     "like Vercel you must provide the certificate PEM text via "
                     "the TIDB_SSL_CA_CONTENT environment variable (do not set a "
-                    "local file path)." % ssl_ca
+                    "local file path)." % resolved_ssl_ca
                 )
-            options['connect_args'] = {'ssl_ca': ssl_ca}
     else:
         options = {'echo': env_flag('SQLALCHEMY_ECHO')}
     return options

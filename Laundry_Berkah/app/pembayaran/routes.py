@@ -5,7 +5,7 @@ from pathlib import Path
 from io import BytesIO
 import re
 
-from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify, flash, Response
+from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify, flash, Response, current_app
 from app.pembayaran.services import PembayaranService
 from app.models import Pembayaran, Transaksi, db
 from app.utils.receipt_image import render_receipt_image
@@ -117,10 +117,14 @@ def struk_image(id_pembayaran):
         return redirect(url_for('transaksi.index'))
 
     receipt_data['tracking_url'] = url_for('transaksi.public_status', id=receipt_data.get('id_transaksi') or receipt_data.get('nomor_transaksi'), _external=True)
-    png_bytes = render_receipt_image(receipt_data)
-    return Response(png_bytes, mimetype='image/png', headers={
-        'Content-Disposition': f'inline; filename="struk-{id_pembayaran}.png"'
-    })
+    try:
+        png_bytes = render_receipt_image(receipt_data)
+        return Response(png_bytes, mimetype='image/png', headers={
+            'Content-Disposition': f'inline; filename="struk-{id_pembayaran}.png"'
+        })
+    except Exception as exc:
+        current_app.logger.exception('Failed to render receipt image for id %s', id_pembayaran)
+        return jsonify({'error': 'Failed to render receipt image'}), 500
 
 
 @pembayaran_bp.route('/struk/image/transaksi/<int:id_transaksi>')
@@ -135,10 +139,14 @@ def struk_image_transaksi(id_transaksi):
         return redirect(url_for('transaksi.index'))
 
     receipt_data['tracking_url'] = url_for('transaksi.public_status', id=id_transaksi, _external=True)
-    png_bytes = render_receipt_image(receipt_data)
-    return Response(png_bytes, mimetype='image/png', headers={
-        'Content-Disposition': f'inline; filename="struk-transaksi-{id_transaksi}.png"'
-    })
+    try:
+        png_bytes = render_receipt_image(receipt_data)
+        return Response(png_bytes, mimetype='image/png', headers={
+            'Content-Disposition': f'inline; filename="struk-transaksi-{id_transaksi}.png"'
+        })
+    except Exception as exc:
+        current_app.logger.exception('Failed to render receipt image for transaksi %s', id_transaksi)
+        return jsonify({'error': 'Failed to render receipt image'}), 500
 
 
 # QR code endpoint removed: receipts no longer include QR tracking images
@@ -158,11 +166,15 @@ def struk(id_pembayaran):
     receipt_data['struk_image_url'] = url_for('pembayaran.struk_image', id_pembayaran=id_pembayaran, _external=True)
     receipt_data['tracking_url'] = url_for('transaksi.public_status', id=receipt_data.get('id_transaksi'), _external=True)
     if is_cloudinary_configured():
-        image_bytes = render_receipt_image(receipt_data)
-        cloud_url = upload_image_bytes(image_bytes, public_id=f'struk_{id_pembayaran}')
-        if cloud_url:
-            receipt_data['whatsapp_image_url'] = cloud_url
-        else:
+        try:
+            image_bytes = render_receipt_image(receipt_data)
+            cloud_url = upload_image_bytes(image_bytes, public_id=f'struk_{id_pembayaran}')
+            if cloud_url:
+                receipt_data['whatsapp_image_url'] = cloud_url
+            else:
+                receipt_data['whatsapp_image_url'] = receipt_data['struk_image_url']
+        except Exception:
+            current_app.logger.exception('Cloudinary upload or rendering failed for pembayaran %s', id_pembayaran)
             receipt_data['whatsapp_image_url'] = receipt_data['struk_image_url']
     else:
         receipt_data['whatsapp_image_url'] = receipt_data['struk_image_url']
@@ -212,11 +224,15 @@ def struk_transaksi(id_transaksi):
     receipt_data['tracking_url'] = url_for('transaksi.public_status', id=id_transaksi, _external=True)
     receipt_data['struk_image_url'] = url_for('pembayaran.struk_image_transaksi', id_transaksi=id_transaksi, _external=True)
     if is_cloudinary_configured():
-        image_bytes = render_receipt_image(receipt_data)
-        cloud_url = upload_image_bytes(image_bytes, public_id=f'struk_transaksi_{id_transaksi}')
-        if cloud_url:
-            receipt_data['whatsapp_image_url'] = cloud_url
-        else:
+        try:
+            image_bytes = render_receipt_image(receipt_data)
+            cloud_url = upload_image_bytes(image_bytes, public_id=f'struk_transaksi_{id_transaksi}')
+            if cloud_url:
+                receipt_data['whatsapp_image_url'] = cloud_url
+            else:
+                receipt_data['whatsapp_image_url'] = receipt_data['struk_image_url']
+        except Exception:
+            current_app.logger.exception('Cloudinary upload or rendering failed for transaksi %s', id_transaksi)
             receipt_data['whatsapp_image_url'] = receipt_data['struk_image_url']
     else:
         receipt_data['whatsapp_image_url'] = receipt_data['struk_image_url']

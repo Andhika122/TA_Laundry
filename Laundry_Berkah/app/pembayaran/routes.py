@@ -17,6 +17,57 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 pembayaran_bp = Blueprint('pembayaran', __name__, template_folder=str(BASE_DIR / 'templates' / 'pembayaran'))
 
 
+def save_receipt_image_url(model, field_name, image_url):
+    setattr(model, field_name, image_url)
+    db.session.commit()
+
+
+def get_or_create_pembayaran_image_url(id_pembayaran, receipt_data, require_cloudinary=False):
+    pembayaran = db.session.get(Pembayaran, id_pembayaran)
+    if pembayaran and pembayaran.struk_image_url:
+        return pembayaran.struk_image_url
+
+    fallback_url = url_for('pembayaran.struk_image', id_pembayaran=id_pembayaran, _external=True)
+    if not is_cloudinary_configured():
+        if require_cloudinary:
+            raise RuntimeError('Cloudinary belum dikonfigurasi, jadi struk gambar belum bisa dikirim lewat Fonte.')
+        return fallback_url
+
+    image_bytes = render_receipt_image(receipt_data)
+    cloud_url = upload_image_bytes(image_bytes, public_id=f'struk_{id_pembayaran}')
+    if not cloud_url:
+        if require_cloudinary:
+            raise RuntimeError('Upload struk ke Cloudinary gagal.')
+        return fallback_url
+
+    if pembayaran:
+        save_receipt_image_url(pembayaran, 'struk_image_url', cloud_url)
+    return cloud_url
+
+
+def get_or_create_transaksi_image_url(id_transaksi, receipt_data, require_cloudinary=False):
+    transaksi = db.session.get(Transaksi, id_transaksi)
+    if transaksi and transaksi.nota_image_url:
+        return transaksi.nota_image_url
+
+    fallback_url = url_for('pembayaran.struk_image_transaksi', id_transaksi=id_transaksi, _external=True)
+    if not is_cloudinary_configured():
+        if require_cloudinary:
+            raise RuntimeError('Cloudinary belum dikonfigurasi, jadi nota gambar belum bisa dikirim lewat Fonte.')
+        return fallback_url
+
+    image_bytes = render_receipt_image(receipt_data)
+    cloud_url = upload_image_bytes(image_bytes, public_id=f'struk_transaksi_{id_transaksi}')
+    if not cloud_url:
+        if require_cloudinary:
+            raise RuntimeError('Upload nota ke Cloudinary gagal.')
+        return fallback_url
+
+    if transaksi:
+        save_receipt_image_url(transaksi, 'nota_image_url', cloud_url)
+    return cloud_url
+
+
 @pembayaran_bp.route('/bayar/<int:id_transaksi>', methods=['GET', 'POST'])
 def bayar(id_transaksi):
     """Form pembayaran transaksi"""
@@ -165,18 +216,10 @@ def struk(id_pembayaran):
 
     receipt_data['struk_image_url'] = url_for('pembayaran.struk_image', id_pembayaran=id_pembayaran, _external=True)
     receipt_data['tracking_url'] = url_for('transaksi.public_status', id=receipt_data.get('id_transaksi'), _external=True)
-    if is_cloudinary_configured():
-        try:
-            image_bytes = render_receipt_image(receipt_data)
-            cloud_url = upload_image_bytes(image_bytes, public_id=f'struk_{id_pembayaran}')
-            if cloud_url:
-                receipt_data['whatsapp_image_url'] = cloud_url
-            else:
-                receipt_data['whatsapp_image_url'] = receipt_data['struk_image_url']
-        except Exception:
-            current_app.logger.exception('Cloudinary upload or rendering failed for pembayaran %s', id_pembayaran)
-            receipt_data['whatsapp_image_url'] = receipt_data['struk_image_url']
-    else:
+    try:
+        receipt_data['whatsapp_image_url'] = get_or_create_pembayaran_image_url(id_pembayaran, receipt_data)
+    except Exception:
+        current_app.logger.exception('Cloudinary upload or rendering failed for pembayaran %s', id_pembayaran)
         receipt_data['whatsapp_image_url'] = receipt_data['struk_image_url']
 
     receipt_data['whatsapp_via_fonte_enabled'] = is_fonte_whatsapp_configured()
@@ -195,12 +238,13 @@ def kirim_whatsapp(id_pembayaran):
         return redirect(url_for('pembayaran.struk', id_pembayaran=id_pembayaran))
 
     receipt_data['struk_image_url'] = url_for('pembayaran.struk_image', id_pembayaran=id_pembayaran, _external=True)
-    if is_cloudinary_configured():
-        image_bytes = render_receipt_image(receipt_data)
-        cloud_url = upload_image_bytes(image_bytes, public_id=f'struk_{id_pembayaran}')
-        image_url = cloud_url or receipt_data['struk_image_url']
-    else:
-        image_url = receipt_data['struk_image_url']
+    receipt_data['tracking_url'] = url_for('transaksi.public_status', id=receipt_data.get('id_transaksi'), _external=True)
+    try:
+        image_url = get_or_create_pembayaran_image_url(id_pembayaran, receipt_data, require_cloudinary=True)
+    except Exception as exc:
+        current_app.logger.exception('Failed to prepare receipt image for pembayaran %s', id_pembayaran)
+        flash(f'Gagal menyiapkan gambar struk: {exc}', 'danger')
+        return redirect(url_for('pembayaran.struk', id_pembayaran=id_pembayaran))
 
     success, message = send_whatsapp_via_fonte(receipt_data, image_url=image_url)
     if success:
@@ -223,18 +267,10 @@ def struk_transaksi(id_transaksi):
 
     receipt_data['tracking_url'] = url_for('transaksi.public_status', id=id_transaksi, _external=True)
     receipt_data['struk_image_url'] = url_for('pembayaran.struk_image_transaksi', id_transaksi=id_transaksi, _external=True)
-    if is_cloudinary_configured():
-        try:
-            image_bytes = render_receipt_image(receipt_data)
-            cloud_url = upload_image_bytes(image_bytes, public_id=f'struk_transaksi_{id_transaksi}')
-            if cloud_url:
-                receipt_data['whatsapp_image_url'] = cloud_url
-            else:
-                receipt_data['whatsapp_image_url'] = receipt_data['struk_image_url']
-        except Exception:
-            current_app.logger.exception('Cloudinary upload or rendering failed for transaksi %s', id_transaksi)
-            receipt_data['whatsapp_image_url'] = receipt_data['struk_image_url']
-    else:
+    try:
+        receipt_data['whatsapp_image_url'] = get_or_create_transaksi_image_url(id_transaksi, receipt_data)
+    except Exception:
+        current_app.logger.exception('Cloudinary upload or rendering failed for transaksi %s', id_transaksi)
         receipt_data['whatsapp_image_url'] = receipt_data['struk_image_url']
 
     receipt_data['whatsapp_via_fonte_enabled'] = is_fonte_whatsapp_configured()
@@ -253,12 +289,13 @@ def kirim_whatsapp_transaksi(id_transaksi):
         return redirect(url_for('pembayaran.struk_transaksi', id_transaksi=id_transaksi))
 
     receipt_data['struk_image_url'] = url_for('pembayaran.struk_image_transaksi', id_transaksi=id_transaksi, _external=True)
-    if is_cloudinary_configured():
-        image_bytes = render_receipt_image(receipt_data)
-        cloud_url = upload_image_bytes(image_bytes, public_id=f'struk_transaksi_{id_transaksi}')
-        image_url = cloud_url or receipt_data['struk_image_url']
-    else:
-        image_url = receipt_data['struk_image_url']
+    receipt_data['tracking_url'] = url_for('transaksi.public_status', id=id_transaksi, _external=True)
+    try:
+        image_url = get_or_create_transaksi_image_url(id_transaksi, receipt_data, require_cloudinary=True)
+    except Exception as exc:
+        current_app.logger.exception('Failed to prepare receipt image for transaksi %s', id_transaksi)
+        flash(f'Gagal menyiapkan gambar nota: {exc}', 'danger')
+        return redirect(url_for('pembayaran.struk_transaksi', id_transaksi=id_transaksi))
 
     success, message = send_whatsapp_via_fonte(receipt_data, image_url=image_url)
     if success:

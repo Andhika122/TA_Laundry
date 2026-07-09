@@ -18,6 +18,16 @@ def _safe_float(value):
 
 class DashboardService:
     """Layanan untuk dashboard statistics"""
+
+    STATUS_GROUPS = {
+        'Antrian': ['Antrian'],
+        'Proses': ['Cuci', 'Pengeringan', 'Setrika', 'Packing'],
+        'Siap Ambil': ['Siap Ambil']
+    }
+
+    @staticmethod
+    def default_status_counts():
+        return {group: 0 for group in DashboardService.STATUS_GROUPS}
     
     @staticmethod
     def get_transaction_status_counts():
@@ -26,14 +36,8 @@ class DashboardService:
         Returns: dict dengan key sebagai status dan value jumlah transaksi
         """
         try:
-            status_groups = {
-                'Antrian': ['Antrian'],
-                'Proses': ['Cuci', 'Pengeringan', 'Setrika', 'Packing'],
-                'Siap Ambil': ['Siap Ambil']
-            }
-            
-            counts = {}
-            for group, statuses in status_groups.items():
+            counts = DashboardService.default_status_counts()
+            for group, statuses in DashboardService.STATUS_GROUPS.items():
                 count = Transaksi.query.filter(
                     Transaksi.status_proses.in_(statuses),
                     Transaksi.is_active == True
@@ -43,7 +47,7 @@ class DashboardService:
             return counts
         except Exception as e:
             print(f"Error in get_transaction_status_counts: {str(e)}")
-            return {}
+            return DashboardService.default_status_counts()
     
     @staticmethod
     def get_today_revenue():

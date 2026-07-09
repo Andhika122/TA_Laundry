@@ -20,6 +20,7 @@ class Transaksi(BaseModel):
     catatan = db.Column(db.Text, nullable=True)
     status_proses = db.Column(db.String(50), default='Antrian')  # Status workflow
     is_active = db.Column(db.Boolean, default=True)
+    nota_image_url = db.Column(db.String(500), nullable=True)
     
     # Relationships
     detail_transaksi = db.relationship('DetailTransaksi', backref='transaksi', lazy=True, cascade='all, delete-orphan')
@@ -68,4 +69,5 @@ class Transaksi(BaseModel):
             'total_harga': float(self.total_harga),
             'status_proses': self.status_proses,
             'catatan': self.catatan,
+            'nota_image_url': self.nota_image_url,
         }

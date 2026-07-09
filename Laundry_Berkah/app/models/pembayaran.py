@@ -17,6 +17,7 @@ class Pembayaran(BaseModel):
     catatan = db.Column(db.Text, nullable=True)
     tanggal_pembayaran = db.Column(db.DateTime, nullable=True)
     bukti_transfer = db.Column(db.String(255), nullable=True)  # URL or file path
+    struk_image_url = db.Column(db.String(500), nullable=True)
     
     def __repr__(self):
         return f'<Pembayaran {self.id_pembayaran}>'
@@ -41,4 +42,5 @@ class Pembayaran(BaseModel):
             'status_pembayaran': self.status_pembayaran,
             'catatan': self.catatan,
             'tanggal_pembayaran': str(self.tanggal_pembayaran) if self.tanggal_pembayaran else None,
+            'struk_image_url': self.struk_image_url,
         }

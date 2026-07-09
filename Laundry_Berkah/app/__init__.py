@@ -94,13 +94,21 @@ def register_root_route(app):
 
 
 def ensure_database_schema(app):
-    """Migrate existing SQLite schema to support newer columns."""
+    """Migrate existing schemas to support newer columns."""
     try:
         inspector = inspect(db.engine)
+        table_names = inspector.get_table_names()
+
+        if 'app_pembayaran' in table_names:
+            ensure_column(inspector, 'app_pembayaran', 'struk_image_url', 'VARCHAR(500)')
+
+        if 'app_transaksi' in table_names:
+            ensure_column(inspector, 'app_transaksi', 'nota_image_url', 'VARCHAR(500)')
+
         if inspector.dialect.name != 'sqlite':
             return
 
-        if 'app_pembayaran' not in inspector.get_table_names():
+        if 'app_pembayaran' not in table_names:
             return
 
         columns = {column['name'] for column in inspector.get_columns('app_pembayaran')}
@@ -116,6 +124,16 @@ def ensure_database_schema(app):
     except Exception as exc:
         db.session.rollback()
         app.logger.warning('Schema migration skipped: %s', exc)
+
+
+def ensure_column(inspector, table_name, column_name, column_type):
+    """Add a nullable column if the current database table does not have it."""
+    columns = {column['name'] for column in inspector.get_columns(table_name)}
+    if column_name in columns:
+        return
+
+    db.session.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"))
+    db.session.commit()
 
 
 def seed_default_data(app):

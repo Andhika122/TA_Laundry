@@ -35,7 +35,7 @@ def create_app(config_name='development'):
     database_uri = 'sqlite:///:memory:' if is_testing else get_database_uri()
     app.config.update({
         'TESTING': is_testing,
-        'USE_SQLITE_FALLBACK': os.getenv('USE_SQLITE_FALLBACK', 'false').lower() in {'1', 'true', 'yes', 'on'},
+        'USE_SQLITE_FALLBACK': app.config.get('USE_SQLITE_FALLBACK', False),
         'SQLALCHEMY_DATABASE_URI': database_uri,
         'SQLALCHEMY_ENGINE_OPTIONS': {} if is_testing else get_engine_options(database_uri),
     })
@@ -66,7 +66,7 @@ def create_app(config_name='development'):
             db.create_all()
             ensure_database_schema(app)
             seed_default_data(app)
-            # Check DB connectivity; fail fast in production if configured to require TiDB
+            # Check DB connectivity; fail fast in production when TiDB is unavailable.
             db_ok = check_database_connection(app)
             if not db_ok and app.config.get('FLASK_ENV') == 'production' and not app.config.get('USE_SQLITE_FALLBACK'):
                 raise RuntimeError('Database connectivity check failed in production environment')
@@ -167,10 +167,14 @@ def seed_default_data(app):
         db.session.add(kasir_user)
 
     layanan_defaults = [
-        ('Cuci Kering Reguler', 7000, 2, 'hari', 'Cuci', 'Cuci dan kering reguler per kg'),
-        ('Cuci Setrika Reguler', 9000, 2, 'hari', 'Cuci Setrika', 'Cuci, kering, dan setrika per kg'),
-        ('Setrika Saja', 5000, 1, 'hari', 'Setrika', 'Setrika pakaian per kg'),
-        ('Express 6 Jam', 15000, 6, 'jam', 'Express', 'Layanan cepat selesai 6 jam per kg'),
+        ('Cuci Kering Lipat Kilat', 5000, 1, 'hari', 'Cuci Kering Lipat', 'Cuci kering lipat kilat per kg'),
+        ('Cuci Kering Lipat Reguler', 4000, 2, 'hari', 'Cuci Kering Lipat', 'Cuci kering lipat reguler per kg'),
+        ('Cuci Kering Setrika Kilat', 7000, 1, 'hari', 'Cuci Kering Setrika', 'Cuci kering setrika kilat per kg'),
+        ('Cuci Kering Setrika Reguler', 6000, 2, 'hari', 'Cuci Kering Setrika', 'Cuci kering setrika reguler per kg'),
+        ('Cuci Kering Kilat', 4500, 1, 'hari', 'Cuci Kering', 'Cuci kering kilat per kg'),
+        ('Cuci Kering Reguler', 3500, 2, 'hari', 'Cuci Kering', 'Cuci kering reguler per kg'),
+        ('Charge Tambahan', 2000, 1, 'jam', 'Charge Tambahan', 'Biaya tambahan layanan khusus'),
+        ('Boneka Kecil', 10000, 2, 'hari', 'Boneka', 'Cuci boneka ukuran kecil'),
     ]
     for nama, harga, durasi, durasi_unit, kategori, deskripsi in layanan_defaults:
         if not Layanan.query.filter_by(nama=nama).first():

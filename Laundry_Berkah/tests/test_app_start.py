@@ -55,9 +55,7 @@ def test_production_uses_tidb_mysql_by_default(monkeypatch):
     assert app_config.SQLALCHEMY_DATABASE_URI.startswith("mysql+pymysql://")
 
 
-def test_sqlite_fallback_uses_local_file(monkeypatch):
-    # SQLite fallback is disabled for development/production; ensure TiDB
-    # remains the database when USE_SQLITE_FALLBACK is set in development.
+def test_sqlite_fallback_flag_is_ignored_outside_testing(monkeypatch):
     monkeypatch.setenv("FLASK_ENV", "development")
     monkeypatch.setenv("USE_SQLITE_FALLBACK", "1")
     monkeypatch.setenv("TIDB_HOST", "127.0.0.1")
@@ -65,15 +63,15 @@ def test_sqlite_fallback_uses_local_file(monkeypatch):
     monkeypatch.setenv("TIDB_USER", "root")
     monkeypatch.setenv("TIDB_PASSWORD", "")
     monkeypatch.setenv("TIDB_DB", "test_db")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
 
     import config as config_module
     config_module = importlib.reload(config_module)
 
     app_config = config_module.config["development"]
 
-    # With fallback flag set in development the config should still point
-    # to the TiDB/MySQL URI (we enforce TiDB usage).
     assert app_config.SQLALCHEMY_DATABASE_URI.startswith("mysql+pymysql://")
+    assert app_config.USE_SQLITE_FALLBACK is False
     assert "sqlite" not in app_config.SQLALCHEMY_DATABASE_URI
 
 

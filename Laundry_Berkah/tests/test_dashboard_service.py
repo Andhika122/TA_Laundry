@@ -11,7 +11,7 @@ def test_dashboard_summary_handles_empty_state():
     os.environ["TIDB_USER"] = "root"
     os.environ["TIDB_PASSWORD"] = ""
     os.environ["TIDB_DB"] = "test_db"
-    os.environ["USE_SQLITE_FALLBACK"] = "1"
+    os.environ["USE_SQLITE_FALLBACK"] = "0"
 
     import app as app_module
     app_module = importlib.reload(app_module)

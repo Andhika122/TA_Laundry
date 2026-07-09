@@ -1,6 +1,6 @@
 """
 Flask Configuration
-Database: TiDB/MySQL by default, SQLite only for explicit fallback or testing
+Database: TiDB/MySQL by default, SQLite in-memory only for tests.
 """
 import os
 from datetime import timedelta
@@ -9,8 +9,6 @@ from urllib.parse import quote_plus
 
 BASE_DIR = os.path.dirname(__file__)
 ROOT_DIR = os.path.dirname(BASE_DIR)
-INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
-
 if os.getenv('VERCEL', '').strip() != '1':
     load_dotenv(os.path.join(ROOT_DIR, '.env'))
     load_dotenv(os.path.join(BASE_DIR, '.env'))
@@ -25,19 +23,6 @@ def env_flag(name, default='false'):
 
 def is_testing_environment():
     return os.getenv('FLASK_ENV', 'development').lower() == 'testing' or env_flag('TESTING')
-
-
-def should_use_sqlite_fallback():
-    # Disable SQLite fallback for normal environments to enforce TiDB usage.
-    # Allow fallback only in explicit testing environments.
-    return is_testing_environment() and env_flag('USE_SQLITE_FALLBACK')
-
-
-def get_sqlite_uri(filename='laundry.db'):
-    """Return a SQLite URI stored inside the Flask instance folder."""
-    os.makedirs(INSTANCE_DIR, exist_ok=True)
-    database_path = os.path.join(INSTANCE_DIR, filename)
-    return f"sqlite:///{database_path.replace(os.sep, '/')}"
 
 
 def build_tidb_uri(user, password, host, port, database):
@@ -63,15 +48,13 @@ def get_database_uri():
         return database_url
     if is_testing_environment():
         return 'sqlite:///:memory:'
-    if should_use_sqlite_fallback():
-        return get_sqlite_uri()
 
     host = os.getenv('TIDB_HOST')
     user = os.getenv('TIDB_USER')
     database = os.getenv('TIDB_DB')
     if not host or not user or not database:
         raise RuntimeError(
-            'Production deployment requires DATABASE_URL or TIDB_HOST, TIDB_USER, and TIDB_DB environment variables.'
+            'TiDB is required. Set DATABASE_URL or TIDB_HOST, TIDB_USER, and TIDB_DB environment variables.'
         )
 
     return build_tidb_uri(
@@ -183,7 +166,7 @@ class Config:
     FLASK_ENV = os.getenv('FLASK_ENV', 'development')
     DEBUG = FLASK_ENV == 'development'
     TESTING = is_testing_environment()
-    USE_SQLITE_FALLBACK = should_use_sqlite_fallback()
+    USE_SQLITE_FALLBACK = False
     
     # Session
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
@@ -204,13 +187,8 @@ class Config:
     SQLALCHEMY_DATABASE_URI = get_database_uri()
     if TESTING:
         SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
-    elif USE_SQLITE_FALLBACK:
-        SQLALCHEMY_DATABASE_URI = get_sqlite_uri()
-    elif FLASK_ENV == 'production' and not SQLALCHEMY_DATABASE_URI.startswith('mysql'):
-        raise RuntimeError(
-            'Production deployment must use TiDB/MySQL via DATABASE_URL or TIDB_* environment variables. '
-            'SQLite fallback is disabled.'
-        )
+    elif not SQLALCHEMY_DATABASE_URI.startswith('mysql'):
+        raise RuntimeError('TiDB/MySQL database is required outside testing.')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = get_engine_options(SQLALCHEMY_DATABASE_URI)
     

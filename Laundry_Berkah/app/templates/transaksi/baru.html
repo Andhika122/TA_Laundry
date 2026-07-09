@@ -542,9 +542,15 @@ function loadLayananByKategori(kategori) {
         document.getElementById('layananOptionsContainer').innerHTML = '';
         return;
     }
-    fetch(`{{ url_for('transaksi.api_layanan_by_kategori', kategori='KATEGORI') }}`.replace('KATEGORI', encodeURIComponent(kategori)))
+    const layananUrl = `{{ url_for('transaksi.api_layanan_by_kategori') }}?kategori=${encodeURIComponent(kategori)}`;
+    fetch(layananUrl)
         .then(r => r.json())
         .then(data => {
+            if (!data || !data.length) {
+                document.getElementById('layananOptionsContainer').innerHTML = '<div class="alert alert-secondary">Tidak ada layanan aktif untuk kategori ini.</div>';
+                return;
+            }
+
             const html = `
                 <div class="form-group">
                     <label class="form-label">Pilih Layanan</label>
@@ -559,6 +565,9 @@ function loadLayananByKategori(kategori) {
                 </div>
             `;
             document.getElementById('layananOptionsContainer').innerHTML = html;
+        })
+        .catch(() => {
+            document.getElementById('layananOptionsContainer').innerHTML = '<div class="alert alert-danger">Gagal membuka layanan. Silakan coba lagi.</div>';
         });
 }
 

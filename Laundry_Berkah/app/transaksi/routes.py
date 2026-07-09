@@ -344,12 +344,17 @@ def public_status():
     )
 
 
+@transaksi_bp.route('/api/layanan')
 @transaksi_bp.route('/api/layanan/<kategori>')
-def api_layanan_by_kategori(kategori):
+def api_layanan_by_kategori(kategori=None):
     """API endpoint untuk ambil layanan berdasarkan kategori"""
     # Allow public access to layanan list so frontend can fetch available
     # services without requiring user login. This endpoint only returns
     # non-sensitive read-only data.
+    kategori = (kategori or request.args.get('kategori', '', type=str)).strip()
+    if not kategori:
+        return jsonify([])
+
     layanan_list = LayananService.get_layanan_by_kategori(kategori)
     
     result = [

@@ -1,6 +1,6 @@
 import os
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 import requests
 
@@ -16,8 +16,21 @@ def normalize_phone(phone):
     return phone
 
 
+def normalize_fonte_api_url(api_url):
+    if not api_url:
+        return api_url
+    parsed = urlparse(api_url)
+    hostname = parsed.hostname or ''
+    if hostname.endswith('fonte.id') or hostname.endswith('api.fonte.id'):
+        parsed = parsed._replace(netloc='api.fonnte.com')
+        if not parsed.path or parsed.path == '/':
+            parsed = parsed._replace(path='/send')
+    return urlunparse(parsed)
+
+
 def get_fonte_api_url():
-    return os.getenv('FONTE_API_URL', os.getenv('FONTE_URL', 'https://api.fonnte.com/send'))
+    raw_url = os.getenv('FONTE_API_URL', os.getenv('FONTE_URL', 'https://api.fonnte.com/send'))
+    return normalize_fonte_api_url(raw_url)
 
 
 def get_fonte_token():

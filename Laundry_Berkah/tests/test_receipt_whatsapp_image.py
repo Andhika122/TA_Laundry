@@ -2,7 +2,7 @@ from app import db
 from app.models import Layanan, Pelanggan
 from app.pembayaran.services import PembayaranService
 from app.transaksi.services import TransaksiService
-from app.utils.fonte_whatsapp import build_fonnte_form_payload
+from app.utils.fonte_whatsapp import build_fonnte_form_payload, normalize_fonte_api_url
 
 
 def create_paid_transaction():
@@ -109,3 +109,9 @@ def test_fonnte_payload_uses_image_url_as_media():
     assert payload['target'] == '628123456789'
     assert payload['url'] == 'https://res.cloudinary.com/demo/struk.png'
     assert payload['filename'].endswith('.png')
+
+
+def test_normalize_fonte_api_url_aliases():
+    assert normalize_fonte_api_url('https://api.fonte.id/send') == 'https://api.fonnte.com/send'
+    assert normalize_fonte_api_url('https://api.fonte.id') == 'https://api.fonnte.com/send'
+    assert normalize_fonte_api_url('https://fonte.id/send') == 'https://api.fonnte.com/send'

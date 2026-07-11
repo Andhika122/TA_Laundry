@@ -125,8 +125,8 @@
                             <td>{{ loop.index }}</td>
                             <td>{{ transaksi.nomor_transaksi }}</td>
                             <td>{{ transaksi.pelanggan.nama if transaksi.pelanggan else '-' }}</td>
-                            <td><span class="badge-status badge-{{ transaksi.status_proses|lower|replace(' ', '') }}">{{ transaksi.status_proses }}</span></td>
-                            <td>Rp {{ '{:,.0f}'.format(transaksi.total_harga).replace(',', '.') }}</td>
+                            <td><span class="badge-status badge-{{ (transaksi.status_proses or 'unknown')|lower|replace(' ', '') }}">{{ transaksi.status_proses or '-' }}</span></td>
+                            <td>Rp {{ '{:,.0f}'.format(transaksi.total_harga or 0).replace(',', '.') }}</td>
                         </tr>
                         {% endfor %}
                     {% else %}

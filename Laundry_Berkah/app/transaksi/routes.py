@@ -3,7 +3,7 @@ Transaksi Module - Transaction Management
 """
 from pathlib import Path
 
-from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify, flash
+from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify, flash, current_app
 from app.transaksi.services import TransaksiService
 from app.layanan.services import LayananService
 from app.pelanggan.services import PelangganService
@@ -319,8 +319,10 @@ def cancel(id_transaksi):
         return redirect(url_for('transaksi.detail', id_transaksi=id_transaksi))
 
     if TransaksiService.cancel_transaksi(id_transaksi):
+        current_app.logger.info('Transaksi %s berhasil dibatalkan oleh user_id %s role %s', id_transaksi, session.get('user_id'), role)
         flash('Transaksi berhasil dibatalkan.', 'success')
     else:
+        current_app.logger.error('Gagal membatalkan transaksi %s oleh user_id %s role %s', id_transaksi, session.get('user_id'), role)
         flash('Gagal membatalkan transaksi. Silakan coba lagi.', 'danger')
 
     return redirect(url_for('transaksi.index'))

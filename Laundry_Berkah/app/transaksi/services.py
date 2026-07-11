@@ -489,6 +489,11 @@ class TransaksiService:
             if not transaksi:
                 return False
 
+            # Delete related detail, pembayaran, and status records explicitly
+            db.session.query(DetailTransaksi).filter_by(id_transaksi=id_transaksi).delete(synchronize_session=False)
+            db.session.query(Pembayaran).filter_by(id_transaksi=id_transaksi).delete(synchronize_session=False)
+            db.session.query(Status).filter_by(id_transaksi=id_transaksi).delete(synchronize_session=False)
+
             db.session.delete(transaksi)
             db.session.commit()
             return True

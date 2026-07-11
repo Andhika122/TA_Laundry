@@ -253,3 +253,93 @@ def test_transaction_with_promo_and_parfum_can_view_struk(client):
     assert b'Lavender' in response.data
     assert b'Parfum' in response.data
     assert b'Rp 10.800' in response.data
+
+
+def test_cancel_transaction_removes_related_data_and_excludes_from_laporan(client):
+    response = client.post('/auth/login', data={'username': 'admin', 'password': 'admin'}, follow_redirects=True)
+    assert response.status_code == 200
+
+    with client.application.app_context():
+        from app.models import Pelanggan, Layanan, Transaksi, db
+        from app.transaksi.services import TransaksiService
+
+        pelanggan = Pelanggan(nama='Test Cancel', telepon='081500000003', alamat='Alamat Cancel', status=True)
+        layanan = Layanan(
+            nama='Cuci Kilo 2',
+            harga=8000,
+            durasi=1,
+            durasi_unit='hari',
+            kategori='Reguler',
+            is_active=True,
+        )
+        db.session.add_all([pelanggan, layanan])
+        db.session.commit()
+
+        transaksi = TransaksiService.create_transaksi(
+            id_pelanggan=pelanggan.id_pelanggan,
+            items=[{'id_layanan': layanan.id_layanan, 'kuantitas': 2}],
+        )
+        assert transaksi is not None
+        transaksi_id = transaksi.id_transaksi
+        assert db.session.get(Transaksi, transaksi_id) is not None
+
+    response = client.post(f'/transaksi/cancel/{transaksi_id}', follow_redirects=True)
+    assert response.status_code == 200
+    assert b'Transaksi berhasil dibatalkan' in response.data
+
+    with client.application.app_context():
+        assert db.session.get(Transaksi, transaksi_id) is None
+
+    response = client.get('/laporan/')
+    assert response.status_code == 200
+    assert b'Rp 0' in response.data
+
+
+def test_laporan_export_pdf_returns_ok_when_no_transactions(client):
+    response = client.post('/auth/login', data={'username': 'admin', 'password': 'admin'}, follow_redirects=True)
+    assert response.status_code == 200
+
+    response = client.get('/laporan/export?format=pdf', follow_redirects=True)
+    assert response.status_code == 200
+    assert response.headers.get('Content-Type', '').startswith('application/pdf')
+
+
+def test_cancel_transaction_removes_data_and_excludes_from_laporan(client):
+    response = client.post('/auth/login', data={'username': 'admin', 'password': 'admin'}, follow_redirects=True)
+    assert response.status_code == 200
+
+    with client.application.app_context():
+        from app.models import Pelanggan, Layanan, Transaksi, db
+        from app.transaksi.services import TransaksiService
+
+        pelanggan = Pelanggan(nama='Test Cancel', telepon='081500000002', alamat='Alamat Cancel', status=True)
+        layanan = Layanan(
+            nama='Cuci Kilo',
+            harga=10000,
+            durasi=1,
+            durasi_unit='hari',
+            kategori='Reguler',
+            is_active=True,
+        )
+        db.session.add_all([pelanggan, layanan])
+        db.session.commit()
+
+        transaksi = TransaksiService.create_transaksi(
+            id_pelanggan=pelanggan.id_pelanggan,
+            items=[{'id_layanan': layanan.id_layanan, 'kuantitas': 2}],
+        )
+        assert transaksi is not None
+        transaksi_id = transaksi.id_transaksi
+
+    response = client.post(f'/transaksi/cancel/{transaksi_id}', follow_redirects=True)
+    assert response.status_code == 200
+    assert b'Transaksi berhasil dibatalkan' in response.data
+
+    with client.application.app_context():
+        assert db.session.get(Transaksi, transaksi_id) is None
+        assert Transaksi.query.filter_by(is_active=True).count() == 0
+
+    response = client.get('/laporan/')
+    assert response.status_code == 200
+    assert b'Total Transaksi' in response.data
+    assert b'Rp 0' in response.data

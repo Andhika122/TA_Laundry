@@ -42,6 +42,16 @@
         </div>
     </div>
 
+    <div class="report-period mb-4 p-4 rounded-3 shadow-sm bg-white">
+        <strong>Periode Laporan:</strong>
+        <span>{{ selected_filter_label }}</span>
+        {% if selected_filter == 'per_tanggal' and custom_date %}
+            <span>({{ custom_date }})</span>
+        {% elif selected_filter == 'per_bulan' and custom_month %}
+            <span>({{ custom_month }})</span>
+        {% endif %}
+    </div>
+
     <div class="card-grid report-metrics mb-4">
         <div class="metric-card bg-white rounded-3 shadow-sm p-4 border-start border-4 border-primary">
             <div class="small text-uppercase text-muted mb-2">Total Transaksi</div>

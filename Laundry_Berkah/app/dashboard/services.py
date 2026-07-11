@@ -4,7 +4,7 @@ Layanan untuk mengambil data statistik realtime dari database
 """
 
 from datetime import datetime, timedelta
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, or_
 from app.models import Transaksi, DetailTransaksi, Pembayaran, Pelanggan, User
 from app import db
 
@@ -98,16 +98,25 @@ class DashboardService:
     @staticmethod
     def get_total_late_orders():
         """
-        Ambil total pesanan terlambat diselesaikan atau diambil
-        Returns: Integer - jumlah transaksi Selesai yang aktualnya melewati estimasi
+        Ambil total pesanan terlambat diselesaikan atau transaksi aktif yang sudah melewati estimasi.
+        Returns: Integer - jumlah transaksi terlambat berdasarkan estimasi selesai.
         """
         try:
+            now = datetime.now()
             count = Transaksi.query.filter(
                 Transaksi.is_active == True,
-                Transaksi.status_proses == 'Selesai',
                 Transaksi.tanggal_selesai_estimasi != None,
-                Transaksi.tanggal_selesai_aktual != None,
-                Transaksi.tanggal_selesai_aktual > Transaksi.tanggal_selesai_estimasi
+                or_(
+                    and_(
+                        Transaksi.status_proses == 'Selesai',
+                        Transaksi.tanggal_selesai_aktual != None,
+                        Transaksi.tanggal_selesai_aktual > Transaksi.tanggal_selesai_estimasi,
+                    ),
+                    and_(
+                        Transaksi.status_proses != 'Selesai',
+                        Transaksi.tanggal_selesai_estimasi < now,
+                    )
+                )
             ).count()
             return count
         except Exception as e:

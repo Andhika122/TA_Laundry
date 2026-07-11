@@ -1,7 +1,7 @@
 import os
 import importlib
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def test_dashboard_summary_handles_empty_state():
@@ -83,3 +83,64 @@ def test_today_revenue_includes_payments():
 
         summary = DashboardService.get_dashboard_summary()
         assert summary["today_revenue"] >= 10000
+
+
+def test_total_late_orders_includes_overdue_unfinished_transactions():
+    os.environ["FLASK_ENV"] = "testing"
+    os.environ.pop("USE_SQLITE_FALLBACK", None)
+    sys.path.insert(0, os.getcwd())
+
+    import app as app_module
+    app_module = importlib.reload(app_module)
+    app = app_module.create_app("testing")
+
+    with app.app_context():
+        from app.models import Pelanggan, Layanan, Transaksi, db
+        from app.dashboard.services import DashboardService
+
+        pelanggan = Pelanggan(nama='Test Late', telepon='0819', alamat='Y', status=True)
+        db.session.add(pelanggan)
+        db.session.flush()
+
+        layanan = Layanan(
+            nama='Cuci Late',
+            harga=10000,
+            durasi=1,
+            durasi_unit='jam',
+            kategori='Reguler',
+            is_active=True,
+        )
+        db.session.add(layanan)
+        db.session.flush()
+
+        transaksi1 = Transaksi(
+            nomor_transaksi='TRX/LATE/001',
+            id_pelanggan=pelanggan.id_pelanggan,
+            tanggal_masuk=datetime.now(),
+            tanggal_selesai_estimasi=datetime.now() - timedelta(hours=2),
+            status_proses='Cuci',
+            is_active=True
+        )
+        transaksi2 = Transaksi(
+            nomor_transaksi='TRX/LATE/002',
+            id_pelanggan=pelanggan.id_pelanggan,
+            tanggal_masuk=datetime.now(),
+            tanggal_selesai_estimasi=datetime.now() - timedelta(hours=4),
+            tanggal_selesai_aktual=datetime.now() - timedelta(hours=1),
+            status_proses='Selesai',
+            is_active=True
+        )
+        transaksi3 = Transaksi(
+            nomor_transaksi='TRX/LATE/003',
+            id_pelanggan=pelanggan.id_pelanggan,
+            tanggal_masuk=datetime.now(),
+            tanggal_selesai_estimasi=datetime.now() + timedelta(hours=4),
+            status_proses='Cuci',
+            is_active=True
+        )
+        db.session.add_all([transaksi1, transaksi2, transaksi3])
+        db.session.commit()
+
+        summary = DashboardService.get_dashboard_summary()
+        assert summary['total_late_orders'] >= 2
+        assert summary['total_late_orders'] == 2

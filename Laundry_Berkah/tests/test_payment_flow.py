@@ -1,6 +1,7 @@
 import os
 import importlib
 import sys
+from datetime import datetime
 
 
 def test_create_payment_for_transaction():
@@ -103,3 +104,152 @@ def test_update_status_to_next_workflow():
 
         transaksi_next = TransaksiService.update_status_to_next(transaksi.id_transaksi)
         assert transaksi_next is None
+
+
+def test_create_transaction_with_parfum_and_promo_and_receipt_data():
+    os.environ['FLASK_ENV'] = 'testing'
+    os.environ.pop('USE_SQLITE_FALLBACK', None)
+    sys.path.insert(0, os.getcwd())
+
+    import app as app_module
+    app_module = importlib.reload(app_module)
+    app = app_module.create_app('testing')
+
+    with app.app_context():
+        from app.models import Pelanggan, Layanan, Promo, Parfum, db
+        from app.pembayaran.services import PembayaranService
+        from app.transaksi.services import TransaksiService
+        from datetime import datetime
+
+        pelanggan = Pelanggan(nama='Test Parfum', telepon='081500000000', alamat='Alamat Test', status=True)
+        db.session.add(pelanggan)
+        db.session.flush()
+
+        layanan = Layanan(
+            nama='Cuci Premium',
+            harga=10000,
+            durasi=2,
+            durasi_unit='jam',
+            kategori='Premium',
+            is_active=True,
+        )
+        db.session.add(layanan)
+
+        parfum = Parfum(
+            nama='Lavender',
+            deskripsi='Parfum Lavender',
+            harga_tambahan=2000,
+            is_active=True,
+        )
+        db.session.add(parfum)
+
+        promo = Promo(
+            nama='Diskon 10%',
+            deskripsi='Promo uji coba',
+            tipe='persentase',
+            nilai=10,
+            minimal_transaksi=5000,
+            tanggal_mulai=datetime.now(),
+            tanggal_akhir=None,
+            is_active=True,
+        )
+        db.session.add(promo)
+        db.session.flush()
+
+        transaksi = TransaksiService.create_transaksi(
+            id_pelanggan=pelanggan.id_pelanggan,
+            items=[{'id_layanan': layanan.id_layanan, 'kuantitas': 1, 'id_parfum': parfum.id_parfum}],
+            promo_id=promo.id_promo,
+        )
+
+        assert transaksi is not None
+        assert float(transaksi.total_harga) == 10800.0
+        assert transaksi.promo_id == promo.id_promo
+        assert transaksi.detail_transaksi
+        assert transaksi.detail_transaksi[0].id_parfum == parfum.id_parfum
+        assert float(transaksi.detail_transaksi[0].harga_parfum) == 2000.0
+
+        receipt_data = PembayaranService.generate_receipt_data_for_transaksi(transaksi.id_transaksi)
+        assert receipt_data is not None
+        assert receipt_data['parfum'] == 'Lavender'
+        assert receipt_data['promo_id'] == promo.id_promo
+        assert receipt_data['promo_nama'] == 'Diskon 10%'
+        assert receipt_data['diskon'] == 1200.0
+        assert receipt_data['detail_items'][0]['parfum'] == 'Lavender'
+        assert receipt_data['total_harga'] == 10800.0
+
+
+def test_transaction_with_promo_and_parfum_can_view_struk(client):
+    # Login as admin to get access to transaction and receipt routes
+    response = client.post('/auth/login', data={'username': 'admin', 'password': 'admin'}, follow_redirects=True)
+    assert response.status_code == 200
+    assert b'Dashboard' in response.data or b'Logout' in response.data
+
+    with client.application.app_context():
+        from app.models import Pelanggan, Layanan, Parfum, Promo, Transaksi, db
+
+        pelanggan = Pelanggan(nama='Test Struk', telepon='081500000001', alamat='Alamat Struk', status=True)
+        db.session.add(pelanggan)
+        layanan = Layanan(
+            nama='Cuci Premium',
+            harga=10000,
+            durasi=2,
+            durasi_unit='jam',
+            kategori='Premium',
+            is_active=True,
+        )
+        db.session.add(layanan)
+        parfum = Parfum(
+            nama='Lavender',
+            deskripsi='Parfum Lavender',
+            harga_tambahan=2000,
+            is_active=True,
+        )
+        promo = Promo(
+            nama='Diskon 10%',
+            deskripsi='Promo uji coba',
+            tipe='persentase',
+            nilai=10,
+            minimal_transaksi=5000,
+            tanggal_mulai=datetime.now(),
+            tanggal_akhir=None,
+            is_active=True,
+        )
+        db.session.add(parfum)
+        db.session.add(promo)
+        db.session.commit()
+
+        layanan = Layanan.query.filter_by(nama='Cuci Premium').first()
+        assert layanan is not None
+        id_pelanggan = pelanggan.id_pelanggan
+        id_parfum = parfum.id_parfum
+        id_promo = promo.id_promo
+
+    response = client.post(
+        '/transaksi/baru',
+        data={
+            'id_pelanggan': id_pelanggan,
+            'catatan': 'Test transaksi promo parfum',
+            'promo_id': id_promo,
+            'layanan[]': [layanan.id_layanan],
+            'kuantitas[]': [1],
+            'parfum[]': [id_parfum],
+            'payment_option': 'pay_later',
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b'Transaksi berhasil dibuat' in response.data
+
+    with client.application.app_context():
+        transaksi = Transaksi.query.order_by(Transaksi.id_transaksi.desc()).first()
+        assert transaksi is not None
+        assert transaksi.promo_id == id_promo
+        assert float(transaksi.total_harga) == 10800.0
+
+    response = client.get(f'/pembayaran/struk/transaksi/{transaksi.id_transaksi}')
+    assert response.status_code == 200
+    assert b'Lavender' in response.data
+    assert b'Parfum' in response.data
+    assert b'Rp 10.800' in response.data

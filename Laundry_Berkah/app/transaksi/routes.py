@@ -251,7 +251,8 @@ def edit(id_transaksi):
     return render_baru(
         form_data={
             'id_pelanggan': transaksi.id_pelanggan,
-            'catatan': transaksi.catatan or ''
+            'catatan': transaksi.catatan or '',
+            'promo_id': transaksi.promo_id
         },
         selected_items=selected_items,
         selected_pelanggan=transaksi.pelanggan,

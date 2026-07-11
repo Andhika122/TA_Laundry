@@ -3,6 +3,7 @@ Promo Model - Promotion/Discount Management
 """
 from app import db
 from app.models import BaseModel, utc_now
+from datetime import datetime
 
 
 class Promo(BaseModel):
@@ -24,7 +25,7 @@ class Promo(BaseModel):
     
     def is_valid(self):
         """Check if promo is still valid"""
-        now = utc_now()
+        now = datetime.now()
         return (self.is_active and 
                 self.tanggal_mulai <= now and 
                 (self.tanggal_akhir is None or self.tanggal_akhir >= now))

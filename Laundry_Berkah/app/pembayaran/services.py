@@ -259,6 +259,7 @@ class PembayaranService:
             })
 
             item_total = sum(float(d.subtotal or 0) for d in transaksi.detail_transaksi)
+            discount_amount = max(0.0, float(Decimal(str(item_total)) - total_harga))
 
             return {
                 'id_transaksi': transaksi.id_transaksi,
@@ -282,6 +283,9 @@ class PembayaranService:
                 'catatan': transaksi.catatan or '',
                 'item_count': sum(int(d.kuantitas or 0) for d in transaksi.detail_transaksi),
                 'parfum': ', '.join(parfum_names) if parfum_names else '-',
+                'promo_id': transaksi.promo_id,
+                'promo_nama': transaksi.promo.nama if transaksi.promo else '-',
+                'diskon': discount_amount,
                 'subtotal': float(item_total),
                 'detail_items': [
                     {
@@ -321,6 +325,7 @@ class PembayaranService:
             })
 
             item_total = sum(float(d.subtotal or 0) for d in transaksi.detail_transaksi)
+            discount_amount = max(0.0, float(Decimal(str(item_total)) - total_harga))
 
             return {
                 'id_transaksi': transaksi.id_transaksi,
@@ -344,6 +349,9 @@ class PembayaranService:
                 'catatan': transaksi.catatan or '',
                 'item_count': sum(int(d.kuantitas or 0) for d in transaksi.detail_transaksi),
                 'parfum': ', '.join(parfum_names) if parfum_names else '-',
+                'promo_id': transaksi.promo_id,
+                'promo_nama': transaksi.promo.nama if transaksi.promo else '-',
+                'diskon': discount_amount,
                 'subtotal': float(item_total),
                 'detail_items': [
                     {

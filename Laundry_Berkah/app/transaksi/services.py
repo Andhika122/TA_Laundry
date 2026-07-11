@@ -105,6 +105,9 @@ class TransaksiService:
                         max_duration = duration_hours
                         max_duration_unit = layanan.durasi_unit
             
+            # Store selected promo reference
+            transaksi.promo_id = promo_id if promo_id else None
+
             # Apply promo if exists
             if promo_id:
                 promo = db.session.get(Promo, promo_id)
@@ -455,6 +458,7 @@ class TransaksiService:
                         max_duration = duration_hours
                         max_duration_unit = layanan.durasi_unit
 
+            transaksi.promo_id = promo_id if promo_id else None
             if promo_id:
                 promo = db.session.get(Promo, promo_id)
                 if promo and promo.is_valid() and total_harga >= promo.minimal_transaksi:
@@ -479,13 +483,13 @@ class TransaksiService:
 
     @staticmethod
     def cancel_transaksi(id_transaksi):
-        """Cancel transaksi (soft delete)"""
+        """Delete transaksi and all related records."""
         try:
             transaksi = db.session.get(Transaksi, id_transaksi)
             if not transaksi:
                 return False
-            
-            transaksi.is_active = False
+
+            db.session.delete(transaksi)
             db.session.commit()
             return True
         except Exception as e:

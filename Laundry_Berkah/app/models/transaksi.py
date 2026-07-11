@@ -17,6 +17,7 @@ class Transaksi(BaseModel):
     tanggal_selesai_estimasi = db.Column(db.DateTime, nullable=True)
     tanggal_selesai_aktual = db.Column(db.DateTime, nullable=True)
     total_harga = db.Column(db.Numeric(10, 2), default=0)
+    promo_id = db.Column(db.Integer, db.ForeignKey('app_promo.id_promo'), nullable=True)
     catatan = db.Column(db.Text, nullable=True)
     status_proses = db.Column(db.String(50), default='Antrian')  # Status workflow
     is_active = db.Column(db.Boolean, default=True)
@@ -26,6 +27,7 @@ class Transaksi(BaseModel):
     detail_transaksi = db.relationship('DetailTransaksi', backref='transaksi', lazy=True, cascade='all, delete-orphan')
     pembayaran = db.relationship('Pembayaran', backref='transaksi', lazy=True, cascade='all, delete-orphan')
     status_history = db.relationship('Status', backref='transaksi', lazy=True, cascade='all, delete-orphan')
+    promo = db.relationship('Promo', backref='transaksi_list', lazy=True)
     
     def __repr__(self):
         return f'<Transaksi {self.nomor_transaksi}>'
@@ -70,6 +72,8 @@ class Transaksi(BaseModel):
             'id_pelanggan': self.id_pelanggan,
             'tanggal_masuk': str(self.tanggal_masuk),
             'total_harga': float(self.total_harga),
+            'promo_id': self.promo_id,
+            'promo_nama': self.promo.nama if self.promo else None,
             'status_proses': self.status_proses,
             'catatan': self.catatan,
             'nota_image_url': self.nota_image_url,

@@ -137,6 +137,6 @@ def send_whatsapp_via_fonte(receipt_data, image_url=None, to_phone=None):
 
         if response.status_code in {200, 201}:
             return True, response.text
-        return False, f'Fonte API error: {response.status_code} {response.text}'
+        return False, f'Fonte API error: {response.status_code} {response.text}. Endpoint: {api_url}. Payload: {payload}'
     except Exception as exc:
-        return False, str(exc)
+        return False, f'Exception saat mengirim ke Fonte: {exc}. Endpoint: {api_url}. Payload: {payload if "payload" in locals() else None}'

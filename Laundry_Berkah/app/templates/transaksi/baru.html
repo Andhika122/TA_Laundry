@@ -429,8 +429,8 @@
 {% block scripts %}
 <script>
 let itemCount = 0;
-const restoredItems = {{ selected_items|tojson }};
-const parfums = {{ parfum_list|tojson }};
+const restoredItems = {{ selected_items|default([])|tojson }};
+const parfums = {{ parfum_list|default([])|tojson }};
 
 function buildParfumOptions(selectedValue = '') {
     return `
@@ -725,7 +725,9 @@ document.getElementById('formTambahPelanggan')?.addEventListener('submit', funct
     });
 });
 
-restoredItems.forEach(restoreItem);
+if (Array.isArray(restoredItems) && restoredItems.length) {
+    restoredItems.forEach(restoreItem);
+}
 hitungTotal();
 </script>
 {% endblock %}

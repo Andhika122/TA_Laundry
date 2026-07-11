@@ -104,6 +104,7 @@ def ensure_database_schema(app):
 
         if 'app_transaksi' in table_names:
             ensure_column(inspector, 'app_transaksi', 'nota_image_url', 'VARCHAR(500)')
+            ensure_column(inspector, 'app_transaksi', 'promo_id', 'INT')
 
         if inspector.dialect.name != 'sqlite':
             return

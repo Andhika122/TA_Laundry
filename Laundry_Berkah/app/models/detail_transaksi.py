@@ -13,6 +13,7 @@ class DetailTransaksi(BaseModel):
     id_transaksi = db.Column(db.Integer, db.ForeignKey('app_transaksi.id_transaksi'), nullable=False)
     id_layanan = db.Column(db.Integer, db.ForeignKey('app_layanan.id_layanan'), nullable=False)
     id_parfum = db.Column(db.Integer, db.ForeignKey('app_parfum.id_parfum'), nullable=True)
+    parfum = db.relationship('Parfum', backref='detail_transaksi', lazy=True)
     kuantitas = db.Column(db.Numeric(10, 2), default=1)
     harga_satuan = db.Column(db.Numeric(10, 2), nullable=False)
     harga_parfum = db.Column(db.Numeric(10, 2), default=0)
@@ -35,6 +36,7 @@ class DetailTransaksi(BaseModel):
             'id_transaksi': self.id_transaksi,
             'id_layanan': self.id_layanan,
             'id_parfum': self.id_parfum,
+            'parfum': self.parfum.nama if self.parfum else None,
             'kuantitas': float(self.kuantitas),
             'harga_satuan': float(self.harga_satuan),
             'harga_parfum': float(self.harga_parfum or 0),

@@ -43,7 +43,7 @@ def build_selected_items(form_data):
 
 def render_baru(form_data=None, selected_items=None, selected_pelanggan=None, edit_mode=False, transaksi=None):
     kategori_list = LayananService.get_kategori_list()
-    promo_list = Promo.query.filter_by(is_active=True).all()
+    promo_list = [promo.to_dict() for promo in Promo.query.filter_by(is_active=True).all()]
     parfum_list = [parfum.to_dict() for parfum in Parfum.query.filter_by(is_active=True).order_by(Parfum.nama).all()]
     if form_data and form_data.get('id_pelanggan'):
         try:

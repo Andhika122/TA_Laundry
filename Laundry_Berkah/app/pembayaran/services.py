@@ -288,6 +288,8 @@ class PembayaranService:
                         'nama': d.layanan.nama,
                         'kuantitas': int(d.kuantitas or 0),
                         'harga': float(d.harga_satuan),
+                        'harga_parfum': float(d.harga_parfum or 0),
+                        'parfum': d.parfum.nama if d.parfum else None,
                         'subtotal': float(d.subtotal)
                     }
                     for d in transaksi.detail_transaksi
@@ -348,6 +350,8 @@ class PembayaranService:
                         'nama': d.layanan.nama,
                         'kuantitas': int(d.kuantitas or 0),
                         'harga': float(d.harga_satuan),
+                        'harga_parfum': float(d.harga_parfum or 0),
+                        'parfum': d.parfum.nama if d.parfum else None,
                         'subtotal': float(d.subtotal)
                     }
                     for d in transaksi.detail_transaksi

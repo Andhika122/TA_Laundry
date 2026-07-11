@@ -299,7 +299,7 @@
                     <select class="form-select" name="promo_id" id="promoSelect">
                         <option value="">-- Tanpa Promo --</option>
                         {% for promo in promo_list %}
-                        <option value="{{ promo.id_promo }}" {% if form_data.get('promo_id')|string == promo.id_promo|string %}selected{% endif %}>
+                        <option value="{{ promo.id_promo }}" data-tipe="{{ promo.tipe }}" data-nilai="{{ promo.nilai }}" data-minimal="{{ promo.minimal_transaksi }}" {% if form_data.get('promo_id')|string == promo.id_promo|string %}selected{% endif %}>
                             {{ promo.nama }} - {{ promo.tipe|upper }}
                         </option>
                         {% endfor %}
@@ -603,12 +603,47 @@ document.getElementById('kategoriLayanan')?.addEventListener('change', function(
     loadLayananByKategori(e.target.value);
 });
 
+document.getElementById('promoSelect')?.addEventListener('change', function() {
+    hitungTotal();
+});
+
 function hapusItem(id) {
     const row = document.getElementById(`item-${id}`);
     if (row) {
         row.remove();
         hitungTotal();
     }
+}
+
+function getSelectedPromo() {
+    const promoSelect = document.getElementById('promoSelect');
+    if (!promoSelect) {
+        return null;
+    }
+    const selectedOption = promoSelect.selectedOptions[0];
+    if (!selectedOption || !selectedOption.value) {
+        return null;
+    }
+    return {
+        id: selectedOption.value,
+        tipe: selectedOption.dataset.tipe || '',
+        nilai: parseFloat(selectedOption.dataset.nilai || 0),
+        minimal: parseFloat(selectedOption.dataset.minimal || 0)
+    };
+}
+
+function calculatePromoDiscount(subtotal) {
+    const promo = getSelectedPromo();
+    if (!promo) {
+        return 0;
+    }
+    if (subtotal < promo.minimal) {
+        return 0;
+    }
+    if (promo.tipe === 'persentase') {
+        return subtotal * (promo.nilai / 100);
+    }
+    return promo.nilai;
 }
 
 function hitungTotal() {
@@ -621,8 +656,8 @@ function hitungTotal() {
         const parfumPrice = parfumSelect ? parseFloat(parfumSelect.selectedOptions[0].dataset.price || 0) : 0;
         subtotal += (harga + parfumPrice) * kuantitas;
     });
-    const diskon = 0;
-    const total = subtotal - diskon;
+    const diskon = calculatePromoDiscount(subtotal);
+    const total = Math.max(subtotal - diskon, 0);
     document.getElementById('subtotal').textContent = `Rp ${subtotal.toLocaleString('id-ID')}`;
     document.getElementById('diskon').textContent = `Rp ${diskon.toLocaleString('id-ID')}`;
     document.getElementById('total').textContent = `Rp ${total.toLocaleString('id-ID')}`;

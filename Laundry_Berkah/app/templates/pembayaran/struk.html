@@ -452,7 +452,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 <tbody>
                     {% for item in receipt.detail_items %}
                     <tr>
-                        <td><span class="item-name">{{ item.nama }}</span></td>
+                        <td>
+                            <span class="item-name">{{ item.nama }}</span>
+                            {% if item.parfum %}
+                            <br><small>Parfum: {{ item.parfum }}{% if item.harga_parfum and item.harga_parfum > 0 %} (+Rp {{ '{:,.0f}'.format(item.harga_parfum).replace(',', '.') }}){% endif %}</small>
+                            {% endif %}
+                        </td>
                         <td>{{ item.kuantitas }}</td>
                         <td>Rp {{ '{:,.0f}'.format(item.harga).replace(',', '.') }}</td>
                         <td>Rp {{ '{:,.0f}'.format(item.subtotal).replace(',', '.') }}</td>

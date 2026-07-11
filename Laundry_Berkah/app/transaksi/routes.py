@@ -8,7 +8,7 @@ from app.transaksi.services import TransaksiService
 from app.layanan.services import LayananService
 from app.pelanggan.services import PelangganService
 from app.pembayaran.services import PembayaranService
-from app.models import Layanan, Pelanggan, Promo, db
+from app.models import Layanan, Pelanggan, Promo, Parfum, db
 from app.utils.whatsapp import build_whatsapp_chat_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -44,6 +44,7 @@ def build_selected_items(form_data):
 def render_baru(form_data=None, selected_items=None, selected_pelanggan=None, edit_mode=False, transaksi=None):
     kategori_list = LayananService.get_kategori_list()
     promo_list = Promo.query.filter_by(is_active=True).all()
+    parfum_list = Parfum.query.filter_by(is_active=True).order_by(Parfum.nama).all()
     if form_data and form_data.get('id_pelanggan'):
         try:
             selected_pelanggan = db.session.get(Pelanggan, int(form_data.get('id_pelanggan')))
@@ -62,7 +63,8 @@ def render_baru(form_data=None, selected_items=None, selected_pelanggan=None, ed
         selected_pelanggan=selected_pelanggan,
         edit_mode=edit_mode,
         transaksi=transaksi,
-        active_page='transaksi'
+        active_page='transaksi',
+        parfum_list=parfum_list
     )
 
 

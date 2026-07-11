@@ -430,6 +430,33 @@
 <script>
 let itemCount = 0;
 const restoredItems = {{ selected_items|tojson }};
+const parfums = {{ parfum_list|tojson }};
+
+function buildParfumOptions(selectedValue = '') {
+    return `
+        <div class="form-group">
+            <label class="form-label">Parfum</label>
+            <select class="form-select parfum-select" onchange="updateParfumChoice(this)">
+                <option value="">-- Tanpa Parfum --</option>
+                ${parfums.map(parfum => `
+                    <option value="${parfum.id_parfum}" data-price="${parfum.harga_tambahan}" ${String(parfum.id_parfum) === String(selectedValue) ? 'selected' : ''}>
+                        ${parfum.nama} ${parfum.harga_tambahan ? `(+ Rp ${Number(parfum.harga_tambahan).toLocaleString('id-ID')})` : ''}
+                    </option>
+                `).join('')}
+            </select>
+        </div>
+    `;
+}
+
+function updateParfumChoice(select) {
+    const row = select.closest('.item-row');
+    if (!row) return;
+    const hidden = row.querySelector('input.parfum');
+    if (hidden) {
+        hidden.value = select.value;
+    }
+    hitungTotal();
+}
 
 // Toast Notification System
 function showToast(message, type = 'success', duration = 3000) {
@@ -518,7 +545,7 @@ function tambahItem(id, nama, harga) {
             <div class="row">
                 <div class="col-md-6">
                     <strong>${nama}</strong><br>
-                    <small>Rp ${harga.toLocaleString('id-ID')}</small>
+                    <small class="layanan-price">Rp ${harga.toLocaleString('id-ID')}</small>
                     <input type="hidden" class="layanan" name="layanan[]" value="${id}">
                 </div>
                 <div class="col-md-4">
@@ -530,6 +557,7 @@ function tambahItem(id, nama, harga) {
                     </button>
                 </div>
             </div>
+            ${buildParfumOptions()}
             <input type="hidden" class="parfum" name="parfum[]" value="">
         </div>
     `;
@@ -586,10 +614,12 @@ function hapusItem(id) {
 function hitungTotal() {
     let subtotal = 0;
     document.querySelectorAll('.item-row').forEach(row => {
-        const hargaText = row.querySelector('small').textContent;
+        const hargaText = row.querySelector('.layanan-price').textContent;
         const harga = parseFloat(hargaText.replace(/[^0-9]/g, '')) || 0;
         const kuantitas = parseInt(row.querySelector('.kuantitas').value) || 1;
-        subtotal += harga * kuantitas;
+        const parfumSelect = row.querySelector('.parfum-select');
+        const parfumPrice = parfumSelect ? parseFloat(parfumSelect.selectedOptions[0].dataset.price || 0) : 0;
+        subtotal += (harga + parfumPrice) * kuantitas;
     });
     const diskon = 0;
     const total = subtotal - diskon;
@@ -606,7 +636,7 @@ function restoreItem(item) {
             <div class="row">
                 <div class="col-md-6">
                     <strong>${item.nama}</strong><br>
-                    <small>Rp ${Number(item.harga).toLocaleString('id-ID')}</small>
+                    <small class="layanan-price">Rp ${Number(item.harga).toLocaleString('id-ID')}</small>
                     <input type="hidden" class="layanan" name="layanan[]" value="${item.id_layanan}">
                 </div>
                 <div class="col-md-4">
@@ -618,6 +648,7 @@ function restoreItem(item) {
                     </button>
                 </div>
             </div>
+            ${buildParfumOptions(item.id_parfum || '')}
             <input type="hidden" class="parfum" name="parfum[]" value="${item.id_parfum || ''}">
         </div>
     `;

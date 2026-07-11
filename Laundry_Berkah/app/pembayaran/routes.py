@@ -6,15 +6,57 @@ from io import BytesIO
 import re
 
 from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify, flash, Response, current_app
+from itsdangerous import BadSignature, URLSafeSerializer
 from app.pembayaran.services import PembayaranService
 from app.models import Pembayaran, Transaksi, db
 from app.utils.receipt_image import render_receipt_image
-from app.utils.cloudinary_upload import is_cloudinary_configured, upload_image_bytes
+from app.utils.cloudinary_upload import is_cloudinary_configured, upload_image_bytes_or_raise
 from app.utils.fonte_whatsapp import is_fonte_configured as is_fonte_whatsapp_configured, send_whatsapp_via_fonte
 from decimal import Decimal
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 pembayaran_bp = Blueprint('pembayaran', __name__, template_folder=str(BASE_DIR / 'templates' / 'pembayaran'))
+
+
+def receipt_image_serializer():
+    return URLSafeSerializer(current_app.config['SECRET_KEY'], salt='receipt-image')
+
+
+def make_receipt_image_token(kind, record_id):
+    return receipt_image_serializer().dumps({'kind': kind, 'id': int(record_id)})
+
+
+def has_valid_receipt_image_token(kind, record_id):
+    token = request.args.get('receipt_token', '')
+    if not token:
+        return False
+    try:
+        data = receipt_image_serializer().loads(token)
+    except BadSignature:
+        return False
+    return data.get('kind') == kind and data.get('id') == int(record_id)
+
+
+def can_view_receipt_image(kind, record_id):
+    return 'user_id' in session or has_valid_receipt_image_token(kind, record_id)
+
+
+def signed_receipt_image_url(endpoint, kind, record_id, **values):
+    return url_for(
+        endpoint,
+        **values,
+        receipt_token=make_receipt_image_token(kind, record_id),
+        _external=True,
+    )
+
+
+def is_local_url(image_url):
+    return any(host in image_url for host in ['localhost', '127.0.0.1'])
+
+
+def save_public_receipt_image_url(model, field_name, image_url):
+    if not is_local_url(image_url):
+        save_receipt_image_url(model, field_name, image_url)
 
 
 def save_receipt_image_url(model, field_name, image_url):
@@ -24,20 +66,27 @@ def save_receipt_image_url(model, field_name, image_url):
 
 def get_or_create_pembayaran_image_url(id_pembayaran, receipt_data, require_cloudinary=False):
     pembayaran = db.session.get(Pembayaran, id_pembayaran)
-    if pembayaran and pembayaran.struk_image_url:
+    if pembayaran and pembayaran.struk_image_url and not is_local_url(pembayaran.struk_image_url):
         return pembayaran.struk_image_url
 
-    fallback_url = url_for('pembayaran.struk_image', id_pembayaran=id_pembayaran, _external=True)
+    fallback_url = signed_receipt_image_url(
+        'pembayaran.struk_image',
+        'pembayaran',
+        id_pembayaran,
+        id_pembayaran=id_pembayaran,
+    )
     if not is_cloudinary_configured():
-        if require_cloudinary:
-            raise RuntimeError('Cloudinary belum dikonfigurasi, jadi struk gambar belum bisa dikirim lewat Fonte.')
+        if pembayaran:
+            save_public_receipt_image_url(pembayaran, 'struk_image_url', fallback_url)
         return fallback_url
 
     image_bytes = render_receipt_image(receipt_data)
-    cloud_url = upload_image_bytes(image_bytes, public_id=f'struk_{id_pembayaran}')
-    if not cloud_url:
-        if require_cloudinary:
-            raise RuntimeError('Upload struk ke Cloudinary gagal.')
+    try:
+        cloud_url = upload_image_bytes_or_raise(image_bytes, public_id=f'struk_{id_pembayaran}')
+    except Exception as exc:
+        current_app.logger.warning('Cloudinary upload failed for pembayaran %s: %s', id_pembayaran, exc)
+        if pembayaran:
+            save_public_receipt_image_url(pembayaran, 'struk_image_url', fallback_url)
         return fallback_url
 
     if pembayaran:
@@ -47,20 +96,27 @@ def get_or_create_pembayaran_image_url(id_pembayaran, receipt_data, require_clou
 
 def get_or_create_transaksi_image_url(id_transaksi, receipt_data, require_cloudinary=False):
     transaksi = db.session.get(Transaksi, id_transaksi)
-    if transaksi and transaksi.nota_image_url:
+    if transaksi and transaksi.nota_image_url and not is_local_url(transaksi.nota_image_url):
         return transaksi.nota_image_url
 
-    fallback_url = url_for('pembayaran.struk_image_transaksi', id_transaksi=id_transaksi, _external=True)
+    fallback_url = signed_receipt_image_url(
+        'pembayaran.struk_image_transaksi',
+        'transaksi',
+        id_transaksi,
+        id_transaksi=id_transaksi,
+    )
     if not is_cloudinary_configured():
-        if require_cloudinary:
-            raise RuntimeError('Cloudinary belum dikonfigurasi, jadi nota gambar belum bisa dikirim lewat Fonte.')
+        if transaksi:
+            save_public_receipt_image_url(transaksi, 'nota_image_url', fallback_url)
         return fallback_url
 
     image_bytes = render_receipt_image(receipt_data)
-    cloud_url = upload_image_bytes(image_bytes, public_id=f'struk_transaksi_{id_transaksi}')
-    if not cloud_url:
-        if require_cloudinary:
-            raise RuntimeError('Upload nota ke Cloudinary gagal.')
+    try:
+        cloud_url = upload_image_bytes_or_raise(image_bytes, public_id=f'struk_transaksi_{id_transaksi}')
+    except Exception as exc:
+        current_app.logger.warning('Cloudinary upload failed for transaksi %s: %s', id_transaksi, exc)
+        if transaksi:
+            save_public_receipt_image_url(transaksi, 'nota_image_url', fallback_url)
         return fallback_url
 
     if transaksi:
@@ -159,7 +215,7 @@ def riwayat(id_transaksi):
 @pembayaran_bp.route('/struk/image/<int:id_pembayaran>')
 def struk_image(id_pembayaran):
     """Return receipt image as PNG."""
-    if 'user_id' not in session:
+    if not can_view_receipt_image('pembayaran', id_pembayaran):
         return redirect(url_for('auth.login'))
 
     receipt_data = PembayaranService.generate_receipt_data(id_pembayaran)
@@ -181,7 +237,7 @@ def struk_image(id_pembayaran):
 @pembayaran_bp.route('/struk/image/transaksi/<int:id_transaksi>')
 def struk_image_transaksi(id_transaksi):
     """Return receipt image PNG for transaksi without payment."""
-    if 'user_id' not in session:
+    if not can_view_receipt_image('transaksi', id_transaksi):
         return redirect(url_for('auth.login'))
 
     receipt_data = PembayaranService.generate_receipt_data_for_transaksi(id_transaksi)

@@ -44,7 +44,7 @@ def test_receipt_image_url_is_saved_to_pembayaran(app, monkeypatch):
         monkeypatch.setattr(pembayaran_routes, 'render_receipt_image', lambda data: b'png-bytes')
         monkeypatch.setattr(
             pembayaran_routes,
-            'upload_image_bytes',
+            'upload_image_bytes_or_raise',
             lambda image_bytes, public_id=None: 'https://res.cloudinary.com/demo/struk.png',
         )
 
@@ -58,6 +58,39 @@ def test_receipt_image_url_is_saved_to_pembayaran(app, monkeypatch):
         db.session.refresh(pembayaran)
         assert image_url == 'https://res.cloudinary.com/demo/struk.png'
         assert pembayaran.struk_image_url == image_url
+
+
+def test_receipt_image_falls_back_to_signed_public_url_when_cloudinary_fails(app, monkeypatch):
+    with app.app_context():
+        _, pembayaran = create_paid_transaction()
+        receipt_data = PembayaranService.generate_receipt_data(pembayaran.id_pembayaran)
+
+        import app.pembayaran.routes as pembayaran_routes
+
+        monkeypatch.setattr(pembayaran_routes, 'is_cloudinary_configured', lambda: True)
+        monkeypatch.setattr(pembayaran_routes, 'render_receipt_image', lambda data: b'png-bytes')
+        monkeypatch.setattr(
+            pembayaran_routes,
+            'upload_image_bytes_or_raise',
+            lambda image_bytes, public_id=None: (_ for _ in ()).throw(RuntimeError('missing permissions')),
+        )
+
+        with app.test_request_context(base_url='https://laundry.example.test'):
+            image_url = pembayaran_routes.get_or_create_pembayaran_image_url(
+                pembayaran.id_pembayaran,
+                receipt_data,
+                require_cloudinary=True,
+            )
+
+        db.session.refresh(pembayaran)
+        assert 'receipt_token=' in image_url
+        assert pembayaran.struk_image_url == image_url
+
+        client = app.test_client()
+        response = client.get(image_url.replace('https://laundry.example.test', ''))
+
+        assert response.status_code == 200
+        assert response.mimetype == 'image/png'
 
 
 def test_fonnte_payload_uses_image_url_as_media():

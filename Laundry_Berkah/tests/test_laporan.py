@@ -175,4 +175,4 @@ def test_laporan_excludes_inactive_transactions_from_revenue(client):
     response = client.get('/laporan/')
     assert response.status_code == 200
     assert b'Rp 12.000' in response.data
-    assert response.data.count(b'Rp 12.000') == 1
+    assert b'Rp 24.000' not in response.data

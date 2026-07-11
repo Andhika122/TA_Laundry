@@ -48,12 +48,15 @@ class Transaksi(BaseModel):
     
     def update_status(self, status_baru):
         """Update transaction status"""
+        from app.models import Status
+
+        status_sebelumnya = self.status_proses
         self.status_proses = status_baru
         
         # Add status history
         status_log = Status(
             id_transaksi=self.id_transaksi,
-            status_sebelumnya=self.status_proses,
+            status_sebelumnya=status_sebelumnya,
             status_baru=status_baru,
             keterangan=f'Status changed to {status_baru}'
         )

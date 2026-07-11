@@ -109,7 +109,10 @@ def index():
     )
 
     total_transactions = filtered_transaksi.count()
-    total_revenue = db.session.query(db.func.coalesce(db.func.sum(Pembayaran.jumlah), 0)).filter(
+    total_revenue = db.session.query(db.func.coalesce(db.func.sum(Pembayaran.jumlah), 0)).join(
+        Transaksi, Pembayaran.id_transaksi == Transaksi.id_transaksi
+    ).filter(
+        Transaksi.is_active == True,
         Pembayaran.tanggal_pembayaran >= start_date,
         Pembayaran.tanggal_pembayaran < end_date
     ).scalar() or 0

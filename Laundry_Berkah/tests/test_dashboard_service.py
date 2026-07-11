@@ -85,6 +85,74 @@ def test_today_revenue_includes_payments():
         assert summary["today_revenue"] >= 10000
 
 
+def test_today_revenue_excludes_inactive_transactions():
+    os.environ["FLASK_ENV"] = "testing"
+    os.environ.pop("USE_SQLITE_FALLBACK", None)
+    sys.path.insert(0, os.getcwd())
+
+    import app as app_module
+    app_module = importlib.reload(app_module)
+    app = app_module.create_app("testing")
+
+    with app.app_context():
+        from app.models import Pelanggan, Layanan, Pembayaran, Transaksi, db
+        from app.dashboard.services import DashboardService
+
+        pelanggan = Pelanggan(nama='Test Revenue', telepon='0819', alamat='Y', status=True)
+        db.session.add(pelanggan)
+        db.session.flush()
+
+        layanan = Layanan(
+            nama='Cuci Revenue',
+            harga=10000,
+            durasi=1,
+            durasi_unit='jam',
+            kategori='Reguler',
+            is_active=True,
+        )
+        db.session.add(layanan)
+        db.session.flush()
+
+        transaksi_active = Transaksi(
+            nomor_transaksi='TRX/REVENUE/ACTIVE',
+            id_pelanggan=pelanggan.id_pelanggan,
+            tanggal_masuk=datetime.now(),
+            total_harga=10000,
+            status_proses='Antrian',
+            is_active=True
+        )
+        transaksi_inactive = Transaksi(
+            nomor_transaksi='TRX/REVENUE/INACTIVE',
+            id_pelanggan=pelanggan.id_pelanggan,
+            tanggal_masuk=datetime.now(),
+            total_harga=10000,
+            status_proses='Antrian',
+            is_active=False
+        )
+        db.session.add_all([transaksi_active, transaksi_inactive])
+        db.session.flush()
+
+        pembayaran_active = Pembayaran(
+            id_transaksi=transaksi_active.id_transaksi,
+            jumlah=10000,
+            metode_pembayaran='Cash',
+            status_pembayaran='Lunas',
+            tanggal_pembayaran=datetime.now()
+        )
+        pembayaran_inactive = Pembayaran(
+            id_transaksi=transaksi_inactive.id_transaksi,
+            jumlah=10000,
+            metode_pembayaran='Cash',
+            status_pembayaran='Lunas',
+            tanggal_pembayaran=datetime.now()
+        )
+        db.session.add_all([pembayaran_active, pembayaran_inactive])
+        db.session.commit()
+
+        summary = DashboardService.get_dashboard_summary()
+        assert summary["today_revenue"] == 10000.0
+
+
 def test_total_late_orders_includes_overdue_unfinished_transactions():
     os.environ["FLASK_ENV"] = "testing"
     os.environ.pop("USE_SQLITE_FALLBACK", None)

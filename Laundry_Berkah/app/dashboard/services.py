@@ -60,7 +60,10 @@ class DashboardService:
             
             total = db.session.query(
                 func.sum(Pembayaran.jumlah)
+            ).join(
+                Transaksi, Pembayaran.id_transaksi == Transaksi.id_transaksi
             ).filter(
+                Transaksi.is_active == True,
                 func.date(Pembayaran.tanggal_pembayaran) == today
             ).scalar()
             
@@ -158,7 +161,10 @@ class DashboardService:
                 
                 revenue = db.session.query(
                     func.sum(Pembayaran.jumlah)
+                ).join(
+                    Transaksi, Pembayaran.id_transaksi == Transaksi.id_transaksi
                 ).filter(
+                    Transaksi.is_active == True,
                     and_(
                         Pembayaran.tanggal_pembayaran >= month_start,
                         Pembayaran.tanggal_pembayaran < month_end

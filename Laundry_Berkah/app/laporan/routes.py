@@ -8,7 +8,7 @@ import io
 
 from flask import Blueprint, render_template, session, redirect, url_for, request, flash, send_file
 from app.utils.auth import login_required, require_role
-from app.models import Transaksi, Pelanggan
+from app.models import Transaksi, Pelanggan, Pembayaran
 from app import db
 from app.transaksi.services import TransaksiService
 
@@ -109,10 +109,9 @@ def index():
     )
 
     total_transactions = filtered_transaksi.count()
-    total_revenue = db.session.query(db.func.coalesce(db.func.sum(Transaksi.total_harga), 0)).filter(
-        Transaksi.is_active == True,
-        Transaksi.tanggal_masuk >= start_date,
-        Transaksi.tanggal_masuk < end_date
+    total_revenue = db.session.query(db.func.coalesce(db.func.sum(Pembayaran.jumlah), 0)).filter(
+        Pembayaran.tanggal_pembayaran >= start_date,
+        Pembayaran.tanggal_pembayaran < end_date
     ).scalar() or 0
     total_customers = db.session.query(db.func.count(db.distinct(Transaksi.id_pelanggan))).filter(
         Transaksi.is_active == True,

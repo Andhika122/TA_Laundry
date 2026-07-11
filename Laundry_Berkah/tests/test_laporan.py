@@ -55,6 +55,14 @@ def test_laporan_filter_by_specific_date(client):
             items=[{'id_layanan': layanan.id_layanan, 'kuantitas': 1}],
         )
         assert transaksi is not None
+        from app.pembayaran.services import PembayaranService
+        pembayaran = PembayaranService.create_pembayaran(
+            id_transaksi=transaksi.id_transaksi,
+            jumlah=9000,
+            metode_pembayaran='Cash',
+            catatan='Pembayaran penuh'
+        )
+        assert pembayaran is not None
         selected_date = datetime.now().date().isoformat()
 
     response = client.get(f'/laporan/?range=per_tanggal&custom_date={selected_date}')
@@ -91,6 +99,14 @@ def test_laporan_filter_by_month(client):
             items=[{'id_layanan': layanan.id_layanan, 'kuantitas': 1}],
         )
         assert transaksi is not None
+        from app.pembayaran.services import PembayaranService
+        pembayaran = PembayaranService.create_pembayaran(
+            id_transaksi=transaksi.id_transaksi,
+            jumlah=11000,
+            metode_pembayaran='Cash',
+            catatan='Pembayaran penuh'
+        )
+        assert pembayaran is not None
         selected_month = datetime.now().strftime('%Y-%m')
 
     response = client.get(f'/laporan/?range=per_bulan&custom_month={selected_month}')

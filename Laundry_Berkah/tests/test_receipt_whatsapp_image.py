@@ -2,7 +2,12 @@ from app import db
 from app.models import Layanan, Pelanggan
 from app.pembayaran.services import PembayaranService
 from app.transaksi.services import TransaksiService
-from app.utils.fonte_whatsapp import build_fonnte_form_payload, normalize_fonte_api_url
+from app.utils.fonte_whatsapp import (
+    build_fonnte_form_payload,
+    is_fonte_configured,
+    normalize_fonte_api_url,
+    send_whatsapp_via_fonte,
+)
 
 
 def create_paid_transaction():
@@ -115,3 +120,29 @@ def test_normalize_fonte_api_url_aliases():
     assert normalize_fonte_api_url('https://api.fonte.id/send') == 'https://api.fonnte.com/send'
     assert normalize_fonte_api_url('https://api.fonte.id') == 'https://api.fonnte.com/send'
     assert normalize_fonte_api_url('https://fonte.id/send') == 'https://api.fonnte.com/send'
+
+
+def test_fonnte_requires_token_but_not_sender_number(monkeypatch):
+    monkeypatch.setenv('FONTE_API_URL', 'https://api.fonnte.com/send')
+    monkeypatch.setenv('FONTE_TOKEN', 'test-token')
+    monkeypatch.delenv('FONTE_PHONE', raising=False)
+    monkeypatch.delenv('nowa', raising=False)
+
+    assert is_fonte_configured()
+
+
+def test_fonnte_reports_rejected_json_response(monkeypatch):
+    class RejectedResponse:
+        status_code = 200
+        text = '{"status":false}'
+
+        def json(self):
+            return {'status': False, 'reason': 'Device belum terhubung'}
+
+    monkeypatch.setenv('FONTE_API_URL', 'https://api.fonnte.com/send')
+    monkeypatch.setenv('FONTE_TOKEN', 'test-token')
+    monkeypatch.setattr('app.utils.fonte_whatsapp.requests.post', lambda *args, **kwargs: RejectedResponse())
+
+    success, message = send_whatsapp_via_fonte({'pelanggan_telepon': '08123456789'})
+    assert not success
+    assert 'Device belum terhubung' in message

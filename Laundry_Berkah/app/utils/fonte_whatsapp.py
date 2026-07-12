@@ -42,7 +42,12 @@ def get_fonte_sender_number():
 
 
 def is_fonte_configured():
-    return bool(get_fonte_api_url() and get_fonte_token() and get_fonte_sender_number())
+    api_url = get_fonte_api_url()
+    if not api_url or not get_fonte_token():
+        return False
+    # Fonnte selects the connected WhatsApp device from the token.  A sender
+    # number is therefore not required and should not hide the send button.
+    return is_fonnte_endpoint(api_url) or bool(get_fonte_sender_number())
 
 
 def build_fonte_payload(receipt_data, image_url=None, to_phone=None):
@@ -80,6 +85,23 @@ def build_fonte_payload(receipt_data, image_url=None, to_phone=None):
 def is_fonnte_endpoint(api_url):
     hostname = urlparse(api_url).hostname or ''
     return hostname.endswith('fonnte.com')
+
+
+def format_fonte_error(response, api_url):
+    """Return a useful API error without exposing credentials or payload."""
+    try:
+        body = response.json()
+    except ValueError:
+        body = response.text
+    return f'Fonte API error: {response.status_code} {body}. Endpoint: {api_url}'
+
+
+def fonnte_response_is_rejected(response):
+    try:
+        response_data = response.json()
+    except ValueError:
+        return False, None
+    return isinstance(response_data, dict) and response_data.get('status') is False, response_data
 
 
 def build_fonnte_form_payload(receipt_data, image_url=None, to_phone=None):
@@ -135,8 +157,27 @@ def send_whatsapp_via_fonte(receipt_data, image_url=None, to_phone=None):
                 timeout=20,
             )
 
-        if response.status_code in {200, 201}:
-            return True, response.text
-        return False, f'Fonte API error: {response.status_code} {response.text}. Endpoint: {api_url}. Payload: {payload}'
+        if response.status_code not in {200, 201}:
+            return False, format_fonte_error(response, api_url)
+
+        # Fonnte can return HTTP 200 for a rejected request, with the actual
+        # delivery result in its JSON ``status`` field.
+        rejected, response_data = fonnte_response_is_rejected(response)
+        if rejected:
+            # Sending media needs a qualifying Fonnte package.  Fall back to
+            # the receipt text so the customer still receives the notification.
+            if is_fonnte_endpoint(api_url) and image_url:
+                text_payload = build_fonnte_form_payload(receipt_data, to_phone=to_phone)
+                text_response = requests.post(
+                    api_url,
+                    data=text_payload,
+                    headers={'Authorization': get_fonte_token()},
+                    timeout=20,
+                )
+                text_rejected, _ = fonnte_response_is_rejected(text_response)
+                if text_response.status_code in {200, 201} and not text_rejected:
+                    return True, 'Gambar struk tidak didukung, tetapi pesan teks berhasil dikirim.'
+            return False, f"Fonte menolak pengiriman: {response_data.get('reason') or response_data.get('detail') or response_data}"
+        return True, response.text
     except Exception as exc:
-        return False, f'Exception saat mengirim ke Fonte: {exc}. Endpoint: {api_url}. Payload: {payload if "payload" in locals() else None}'
+        return False, f'Exception saat mengirim ke Fonte: {exc}. Endpoint: {api_url}'

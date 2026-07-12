@@ -135,6 +135,7 @@ def test_fonnte_requires_token_but_not_sender_number(monkeypatch):
 
 def test_fonte_token_is_trimmed_and_unknown_token_has_actionable_message(monkeypatch):
     monkeypatch.setenv('FONTE_TOKEN', "  'new-token'  ")
+    monkeypatch.setenv('FLASK_ENV', 'production')
 
     assert get_fonte_token() == 'new-token'
     assert 'restart aplikasi' in fonte_rejection_message({'reason': 'unknown token'}).lower()

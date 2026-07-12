@@ -1,8 +1,25 @@
 import os
 import re
+from pathlib import Path
 from urllib.parse import urlparse, urlunparse
 
 import requests
+from dotenv import dotenv_values
+
+
+FONTE_ENV_FILE = Path(__file__).resolve().parents[2] / '.env'
+
+
+def get_fonte_setting(name, legacy_name=None, default=''):
+    """Read Fonte settings, refreshing the local development .env file."""
+    value = os.getenv(name) or (os.getenv(legacy_name) if legacy_name else None)
+    # In development, let a newly saved .env value replace any stale value
+    # inherited by the already-running editor or terminal process.
+    if os.getenv('FLASK_ENV', 'development').lower() != 'production' and not os.getenv('VERCEL'):
+        file_value = dotenv_values(FONTE_ENV_FILE).get(name)
+        if file_value:
+            value = file_value
+    return str(value or default).strip()
 
 
 def normalize_phone(phone):
@@ -29,19 +46,19 @@ def normalize_fonte_api_url(api_url):
 
 
 def get_fonte_api_url():
-    raw_url = os.getenv('FONTE_API_URL', os.getenv('FONTE_URL', 'https://api.fonnte.com/send'))
+    raw_url = get_fonte_setting('FONTE_API_URL', 'FONTE_URL', 'https://api.fonnte.com/send')
     return normalize_fonte_api_url(raw_url)
 
 
 def get_fonte_token():
-    token = os.getenv('FONTE_TOKEN') or os.getenv('Token') or ''
+    token = get_fonte_setting('FONTE_TOKEN', 'Token')
     # Avoid an invalid Authorization header when a token is pasted with
     # surrounding whitespace or quotes in the environment configuration.
     return token.strip().strip('"').strip("'")
 
 
 def get_fonte_sender_number():
-    return os.getenv('FONTE_PHONE') or os.getenv('nowa')
+    return get_fonte_setting('FONTE_PHONE', 'nowa')
 
 
 def is_fonte_configured():

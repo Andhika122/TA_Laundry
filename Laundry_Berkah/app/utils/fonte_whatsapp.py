@@ -34,7 +34,10 @@ def get_fonte_api_url():
 
 
 def get_fonte_token():
-    return os.getenv('FONTE_TOKEN') or os.getenv('Token')
+    token = os.getenv('FONTE_TOKEN') or os.getenv('Token') or ''
+    # Avoid an invalid Authorization header when a token is pasted with
+    # surrounding whitespace or quotes in the environment configuration.
+    return token.strip().strip('"').strip("'")
 
 
 def get_fonte_sender_number():
@@ -102,6 +105,13 @@ def fonnte_response_is_rejected(response):
     except ValueError:
         return False, None
     return isinstance(response_data, dict) and response_data.get('status') is False, response_data
+
+
+def fonte_rejection_message(response_data):
+    reason = response_data.get('reason') or response_data.get('detail') or response_data
+    if 'unknown token' in str(reason).lower() or 'token invalid' in str(reason).lower():
+        return 'Token Fonte tidak dikenali. Pastikan token terbaru tersimpan, lalu restart aplikasi/deploy ulang.'
+    return f'Fonte menolak pengiriman: {reason}'
 
 
 def build_fonnte_form_payload(receipt_data, image_url=None, to_phone=None):
@@ -177,7 +187,7 @@ def send_whatsapp_via_fonte(receipt_data, image_url=None, to_phone=None):
                 text_rejected, _ = fonnte_response_is_rejected(text_response)
                 if text_response.status_code in {200, 201} and not text_rejected:
                     return True, 'Gambar struk tidak didukung, tetapi pesan teks berhasil dikirim.'
-            return False, f"Fonte menolak pengiriman: {response_data.get('reason') or response_data.get('detail') or response_data}"
+            return False, fonte_rejection_message(response_data)
         return True, response.text
     except Exception as exc:
         return False, f'Exception saat mengirim ke Fonte: {exc}. Endpoint: {api_url}'

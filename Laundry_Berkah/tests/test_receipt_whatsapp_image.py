@@ -4,6 +4,8 @@ from app.pembayaran.services import PembayaranService
 from app.transaksi.services import TransaksiService
 from app.utils.fonte_whatsapp import (
     build_fonnte_form_payload,
+    fonte_rejection_message,
+    get_fonte_token,
     is_fonte_configured,
     normalize_fonte_api_url,
     send_whatsapp_via_fonte,
@@ -129,6 +131,13 @@ def test_fonnte_requires_token_but_not_sender_number(monkeypatch):
     monkeypatch.delenv('nowa', raising=False)
 
     assert is_fonte_configured()
+
+
+def test_fonte_token_is_trimmed_and_unknown_token_has_actionable_message(monkeypatch):
+    monkeypatch.setenv('FONTE_TOKEN', "  'new-token'  ")
+
+    assert get_fonte_token() == 'new-token'
+    assert 'restart aplikasi' in fonte_rejection_message({'reason': 'unknown token'}).lower()
 
 
 def test_fonnte_reports_rejected_json_response(monkeypatch):

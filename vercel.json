@@ -1,22 +1,15 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python"
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 30
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "api/index.py"
+      "source": "/(.*)",
+      "destination": "/api/index.py"
     }
-  ],
-  "env": {
-    "FLASK_ENV": "production",
-    "USE_SQLITE_FALLBACK": "false",
-    "VERCEL": "1",
-    "UPLOAD_FOLDER": "/tmp/uploads",
-    "LOG_DIR": "/tmp/logs"
-  }
+  ]
 }

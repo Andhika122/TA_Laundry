@@ -28,7 +28,9 @@ pip install -r requirements-dev.txt
 
 ## Konfigurasi environment
 Salin contoh `.env` (jika ada) dan isi nilai sensitif seperti DB, Cloudinary, Fonte WA.
-File konfigurasi utama: `Laundry_Berkah/.env`.
+File konfigurasi utama: `Laundry_Berkah/.env`. Salin
+`Laundry_Berkah/.env.example` untuk melihat semua key yang dibutuhkan tanpa
+menyalin token.
 
 Untuk menjalankan aplikasi tanpa koneksi ke TiDB, set `FLASK_ENV=testing` untuk menggunakan SQLite in-memory.
 
@@ -65,5 +67,8 @@ Format kode dengan Black dan isort, lalu periksa dengan flake8:
 ## Catatan
 - Konfigurasi Fonte WA berada di `Laundry_Berkah/.env` (`FONTE_TOKEN`, `FONTE_PHONE`, `FONTE_API_URL`).
 - Jangan commit file `.env` yang berisi kredensial ke repositori publik.
+- Untuk Vercel, isi semua kredensial di **Project Settings → Environment
+  Variables**, lalu redeploy. Panduan key lengkap ada di
+  `Laundry_Berkah/README.md`.
 
 Jika mau, saya bisa: menambahkan badge test ke README, membuat skrip `run_tests.cmd`, atau commit perubahan. Pilih aksi selanjutnya.

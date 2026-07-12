@@ -30,7 +30,9 @@ except Exception as e_entry:
     # Try to build directly from the package
     try:
         from app import create_app  # type: ignore
-        config_name = os.getenv('FLASK_ENV', 'development')
+        config_name = os.getenv('FLASK_ENV') or (
+            'production' if os.getenv('VERCEL', '').strip() == '1' else 'development'
+        )
         app = create_app(config_name)
         print('[API] Built app via create_app')
     except Exception as e_build:

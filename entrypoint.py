@@ -14,6 +14,8 @@ if os.getenv('VERCEL', '').strip() != '1':
 
 from app import create_app  # noqa: E402
 
-config_name = os.getenv('FLASK_ENV', 'development')
+config_name = os.getenv('FLASK_ENV') or (
+    'production' if os.getenv('VERCEL', '').strip() == '1' else 'development'
+)
 app = create_app(config_name)
 application = app

@@ -94,6 +94,19 @@ def test_vercel_production_uses_tidb_when_configured(monkeypatch):
     assert app_config.SQLALCHEMY_DATABASE_URI.startswith("mysql+pymysql://")
 
 
+def test_vercel_defaults_to_production_without_flask_env(monkeypatch):
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.delenv("FLASK_ENV", raising=False)
+    monkeypatch.setenv("TIDB_HOST", "127.0.0.1")
+    monkeypatch.setenv("TIDB_USER", "root")
+    monkeypatch.setenv("TIDB_DB", "test_db")
+
+    import config as config_module
+    config_module = importlib.reload(config_module)
+
+    assert config_module.get_config() is config_module.ProductionConfig
+
+
 def test_ssl_ca_path_resolves_from_project_root(monkeypatch):
     monkeypatch.setenv("FLASK_ENV", "production")
     monkeypatch.setenv("VERCEL", "1")

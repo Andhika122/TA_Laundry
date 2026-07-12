@@ -9,16 +9,25 @@ Quick deploy to Vercel
    - `requirements.txt`
 
 2. Set the Vercel environment variables:
-   - `FLASK_ENV=production`
-   - `USE_SQLITE_FALLBACK=false`
-   - `VERCEL=1`
    - `SECRET_KEY` set to a secure random string
    - `DATABASE_URL` with a TiDB/MySQL SQLAlchemy URL, or all of:
      `TIDB_HOST`, `TIDB_USER`, `TIDB_PASSWORD`, `TIDB_DB`
    - Optional for TiDB TLS: `TIDB_SSL_CA_CONTENT` containing the PEM certificate text
-   - Optional writable paths: `UPLOAD_FOLDER=/tmp/uploads`, `LOG_DIR=/tmp/logs`
+   - Fonnte: `FONTE_TOKEN` (device token) and
+     `FONTE_API_URL=https://api.fonnte.com/send`
+   - Optional receipt image attachment: `CLOUDINARY_CLOUD_NAME`,
+     `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+   - Optional email: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`,
+     `CONTACT_RECIPIENT_EMAIL`
 
-3. Commit, push, then redeploy from the Vercel dashboard.
+   Add the variables to **Production** (and Preview too if it is used for
+   testing). Vercel provides the `VERCEL=1` runtime variable automatically;
+   this project automatically selects production mode when it is present.
+   Use `Laundry_Berkah/.env.example` as the complete key list, but never upload
+   the actual `.env` file or tokens.
+
+3. Commit, push, then redeploy from the Vercel dashboard. Every environment
+   variable update only affects newly created deployments.
 
 Database behavior
 

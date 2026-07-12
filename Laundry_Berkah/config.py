@@ -163,7 +163,9 @@ class Config:
     """Base configuration"""
     # Flask
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
-    FLASK_ENV = os.getenv('FLASK_ENV', 'development')
+    FLASK_ENV = os.getenv('FLASK_ENV') or (
+        'production' if os.getenv('VERCEL', '').strip() == '1' else 'development'
+    )
     DEBUG = FLASK_ENV == 'development'
     TESTING = is_testing_environment()
     USE_SQLITE_FALLBACK = False
@@ -261,5 +263,7 @@ config = {
 
 def get_config():
     """Get configuration based on FLASK_ENV"""
-    env = os.getenv('FLASK_ENV', 'development')
+    env = os.getenv('FLASK_ENV') or (
+        'production' if os.getenv('VERCEL', '').strip() == '1' else 'development'
+    )
     return config.get(env, config['default'])

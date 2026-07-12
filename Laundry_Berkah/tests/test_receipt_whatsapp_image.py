@@ -3,6 +3,7 @@ from app.models import Layanan, Pelanggan
 from app.pembayaran.services import PembayaranService
 from app.transaksi.services import TransaksiService
 from app.utils.fonte_whatsapp import (
+    build_fonte_payload,
     build_fonnte_form_payload,
     fonte_rejection_message,
     get_fonte_token,
@@ -119,7 +120,12 @@ def test_fonnte_payload_uses_image_url_as_media():
 
 
 def test_fonte_payload_omits_sender_when_phone_not_configured(monkeypatch):
+    monkeypatch.setenv('FLASK_ENV', 'production')
+    monkeypatch.delenv('VERCEL', raising=False)
+    monkeypatch.setenv('FONTE_TOKEN', 'test-token')
     monkeypatch.delenv('FONTE_PHONE', raising=False)
+    monkeypatch.delenv('nowa', raising=False)
+
     payload = build_fonte_payload(
         {
             'pelanggan_telepon': '08123456789',

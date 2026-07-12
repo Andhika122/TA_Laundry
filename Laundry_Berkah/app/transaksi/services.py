@@ -111,12 +111,8 @@ class TransaksiService:
             # Apply promo if exists
             if promo_id:
                 promo = db.session.get(Promo, promo_id)
-                if promo and promo.is_valid() and total_harga >= promo.minimal_transaksi:
-                    if promo.tipe == 'persentase':
-                        discount = total_harga * Decimal(str(promo.nilai)) / Decimal('100')
-                    else:  # nominal
-                        discount = Decimal(str(promo.nilai))
-                    
+                if promo:
+                    discount = Decimal(str(promo.calculate_discount(total_harga)))
                     total_harga = max(total_harga - discount, Decimal('0'))
             
             transaksi.total_harga = total_harga
@@ -461,11 +457,8 @@ class TransaksiService:
             transaksi.promo_id = promo_id if promo_id else None
             if promo_id:
                 promo = db.session.get(Promo, promo_id)
-                if promo and promo.is_valid() and total_harga >= promo.minimal_transaksi:
-                    if promo.tipe == 'persentase':
-                        discount = total_harga * Decimal(str(promo.nilai)) / Decimal('100')
-                    else:
-                        discount = Decimal(str(promo.nilai))
+                if promo:
+                    discount = Decimal(str(promo.calculate_discount(total_harga)))
                     total_harga = max(total_harga - discount, Decimal('0'))
 
             transaksi.total_harga = total_harga

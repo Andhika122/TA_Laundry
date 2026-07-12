@@ -1,7 +1,27 @@
 import os
 import importlib
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
+
+
+def test_promo_only_applies_when_active_and_caps_nominal_discount(app):
+    with app.app_context():
+        from app.models import Promo, utc_now
+
+        promo = Promo(
+            nama='Diskon Nominal',
+            tipe='nominal',
+            nilai=50000,
+            minimal_transaksi=10000,
+            tanggal_mulai=utc_now() - timedelta(minutes=1),
+            is_active=True,
+        )
+
+        assert promo.calculate_discount(9000) == 0.0
+        assert promo.calculate_discount(20000) == 20000.0
+
+        promo.is_active = False
+        assert promo.calculate_discount(20000) == 0.0
 
 
 def test_create_payment_for_transaction():

@@ -24,18 +24,25 @@ class Promo(BaseModel):
         return f'<Promo {self.nama}>'
     
     def is_valid(self):
-        """Check if promo is still valid"""
+        """Check whether the promo is active within its configured period."""
+        # Existing records use the server's local naive datetime, so keep the
+        # comparison in that convention for compatibility.
         now = datetime.now()
         return (self.is_active and 
-                self.tanggal_mulai <= now and 
+                (self.tanggal_mulai is None or self.tanggal_mulai <= now) and
                 (self.tanggal_akhir is None or self.tanggal_akhir >= now))
     
     def calculate_discount(self, amount):
-        """Calculate discount amount"""
+        """Return the applicable discount, capped at the transaction amount."""
+        amount = max(float(amount or 0), 0)
+        if not self.is_valid() or amount < float(self.minimal_transaksi or 0):
+            return 0.0
+
         if self.tipe == 'persentase':
-            return float(amount) * (float(self.nilai) / 100)
+            discount = amount * (float(self.nilai) / 100)
         else:
-            return float(self.nilai)
+            discount = float(self.nilai)
+        return min(discount, amount)
     
     def to_dict(self):
         """Convert to dictionary"""

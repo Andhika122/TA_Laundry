@@ -640,10 +640,10 @@ function calculatePromoDiscount(subtotal) {
     if (subtotal < promo.minimal) {
         return 0;
     }
-    if (promo.tipe === 'persentase') {
-        return subtotal * (promo.nilai / 100);
-    }
-    return promo.nilai;
+    const diskon = promo.tipe === 'persentase'
+        ? subtotal * (promo.nilai / 100)
+        : promo.nilai;
+    return Math.min(diskon, subtotal);
 }
 
 function hitungTotal() {

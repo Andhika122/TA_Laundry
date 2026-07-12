@@ -118,6 +118,23 @@ def test_fonnte_payload_uses_image_url_as_media():
     assert payload['filename'].endswith('.png')
 
 
+def test_fonte_payload_omits_sender_when_phone_not_configured(monkeypatch):
+    monkeypatch.delenv('FONTE_PHONE', raising=False)
+    payload = build_fonte_payload(
+        {
+            'pelanggan_telepon': '08123456789',
+            'nomor_transaksi': 'TRX/090726/001',
+            'pelanggan_nama': 'Pelanggan Nota',
+            'total_harga': 12000,
+            'jumlah_bayar': 12000,
+            'kurang': 0,
+        },
+        image_url='https://res.cloudinary.com/demo/struk.png',
+    )
+
+    assert 'sender' not in payload
+
+
 def test_normalize_fonte_api_url_aliases():
     assert normalize_fonte_api_url('https://api.fonte.id/send') == 'https://api.fonnte.com/send'
     assert normalize_fonte_api_url('https://api.fonte.id') == 'https://api.fonnte.com/send'

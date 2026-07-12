@@ -93,9 +93,12 @@ def build_fonte_payload(receipt_data, image_url=None, to_phone=None):
     payload = {
         'token': get_fonte_token(),
         'to': phone,
-        'sender': get_fonte_sender_number(),
         'message': '\n'.join(message_lines),
     }
+    sender = get_fonte_sender_number()
+    if sender:
+        payload['sender'] = sender
+
     if image_url:
         payload['image'] = image_url
         payload['caption'] = 'Struk Pembayaran Laundry Berkah'

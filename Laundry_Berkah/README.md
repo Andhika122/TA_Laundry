@@ -17,6 +17,8 @@ Quick deploy to Vercel
      `FONTE_API_URL=https://api.fonnte.com/send`
    - Optional receipt image attachment: `CLOUDINARY_CLOUD_NAME`,
      `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+   - `FONTE_PHONE` is optional for `https://api.fonnte.com/send`; only the
+     device token is required in most setups.
    - Optional email: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`,
      `CONTACT_RECIPIENT_EMAIL`
 

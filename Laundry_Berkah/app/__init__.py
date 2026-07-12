@@ -221,15 +221,20 @@ def seed_default_data(app):
                 is_active=True,
             ))
 
-    if not Promo.query.filter_by(nama='Member Baru').first():
+    promo_member_baru = Promo.query.filter_by(nama='Member Baru').first()
+    if not promo_member_baru:
         db.session.add(Promo(
             nama='Member Baru',
             deskripsi='Diskon 10% untuk pelanggan baru',
             tipe='persentase',
             nilai=10,
-            minimal_transaksi=30000,
+            minimal_transaksi=0,
             is_active=True,
         ))
+    elif promo_member_baru.minimal_transaksi != 0:
+        # The default welcome promo should apply immediately when selected.
+        # This also updates databases created before the no-minimum rule.
+        promo_member_baru.minimal_transaksi = 0
 
     db.session.commit()
 

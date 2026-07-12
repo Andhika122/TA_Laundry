@@ -304,6 +304,7 @@
                         </option>
                         {% endfor %}
                     </select>
+                    <small class="text-muted d-block mt-2" id="promoInfo" aria-live="polite"></small>
                 </div>
             </div>
             <div class="summary-box">
@@ -661,6 +662,18 @@ function hitungTotal() {
     document.getElementById('subtotal').textContent = `Rp ${subtotal.toLocaleString('id-ID')}`;
     document.getElementById('diskon').textContent = `Rp ${diskon.toLocaleString('id-ID')}`;
     document.getElementById('total').textContent = `Rp ${total.toLocaleString('id-ID')}`;
+
+    const promo = getSelectedPromo();
+    const promoInfo = document.getElementById('promoInfo');
+    if (promoInfo) {
+        if (!promo) {
+            promoInfo.textContent = '';
+        } else if (subtotal < promo.minimal) {
+            promoInfo.textContent = `Promo berlaku mulai Rp ${promo.minimal.toLocaleString('id-ID')}.`;
+        } else {
+            promoInfo.textContent = `Diskon Rp ${diskon.toLocaleString('id-ID')} diterapkan.`;
+        }
+    }
 }
 
 function restoreItem(item) {

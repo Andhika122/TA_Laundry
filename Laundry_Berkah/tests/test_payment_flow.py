@@ -22,8 +22,6 @@ def test_promo_only_applies_when_active_and_caps_nominal_discount(app):
 
         promo.is_active = False
         assert promo.calculate_discount(20000) == 0.0
-
-
 def test_create_payment_for_transaction():
     os.environ['FLASK_ENV'] = 'testing'
     os.environ.pop('USE_SQLITE_FALLBACK', None)

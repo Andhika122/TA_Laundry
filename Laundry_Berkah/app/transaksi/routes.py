@@ -8,7 +8,7 @@ from app.transaksi.services import TransaksiService
 from app.layanan.services import LayananService
 from app.pelanggan.services import PelangganService
 from app.pembayaran.services import PembayaranService
-from app.models import Layanan, Pelanggan, Promo, Parfum, db
+from app.models import Layanan, Pelanggan, Promo, Parfum, Transaksi, db
 from app.utils.whatsapp import build_whatsapp_chat_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent

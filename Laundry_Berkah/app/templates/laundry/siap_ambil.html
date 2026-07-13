@@ -65,17 +65,9 @@
 <div class="section-card">
     <h2><i class="fas fa-check-double"></i> Transaksi Siap Diambil</h2>
     
-    <!-- Notifikasi untuk transaksi belum bayar -->
-    {% set belum_bayar = [] %}
-    {% for transaksi in transaksi_list %}
-        {% if payment_status_map[transaksi.id_transaksi] and payment_status_map[transaksi.id_transaksi].status != 'Lunas' %}
-            {% if belum_bayar.append(transaksi) %}{% endif %}
-        {% endif %}
-    {% endfor %}
-    
-    {% if belum_bayar %}
+    {% if unpaid_count > 0 %}
     <div class="alert alert-warning alert-dismissible fade show" role="alert">
-        <i class="fas fa-exclamation-triangle"></i> <strong>⚠️ Perhatian!</strong> Ada {{ belum_bayar|length }} transaksi siap ambil yang belum dibayar. Pastikan pelanggan melakukan pembayaran terlebih dahulu sebelum transaksi diselesaikan.
+        <i class="fas fa-exclamation-triangle"></i> <strong>⚠️ Perhatian!</strong> Ada {{ unpaid_count }} transaksi siap ambil yang belum dibayar. Pastikan pelanggan melakukan pembayaran terlebih dahulu sebelum transaksi diselesaikan.
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     {% endif %}
@@ -84,7 +76,7 @@
     <div class="transaction-list">
         {% for transaksi in transaksi_list %}
         {% set status_bayar = payment_status_map[transaksi.id_transaksi] %}
-        {% set is_belum_bayar = status_bayar and status_bayar.status != 'Lunas' %}
+        {% set is_belum_bayar = not status_bayar or status_bayar.status != 'Lunas' %}
         <div class="transaction-card {% if is_belum_bayar %}unpaid-warning{% endif %}">
             <div class="top">
                 <div class="title">{{ transaksi.nomor_transaksi }}</div>
@@ -111,8 +103,18 @@
             </div>
             <div class="actions">
                 <a href="{{ url_for('transaksi.detail', id_transaksi=transaksi.id_transaksi) }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-eye"></i> Detail</a>
-                <button type="button" class="btn btn-primary btn-sm" onclick="advanceLaundryStatus({{ transaksi.id_transaksi }}, this)">
-                    <i class="fas fa-arrow-right"></i> Proses
+                {% set next_status = next_status_map[transaksi.id_transaksi] %}
+                <button type="button" class="btn btn-primary btn-sm" onclick="advanceLaundryStatus({{ transaksi.id_transaksi }}, this)" {% if not can_advance_map[transaksi.id_transaksi] %}disabled{% endif %}>
+                    <i class="fas fa-arrow-right"></i>
+                    {% if can_advance_map[transaksi.id_transaksi] %}
+                        Lanjut ke {{ next_status or 'Proses' }}
+                    {% else %}
+                        {% if next_status == 'Selesai' %}
+                            Bayar dulu untuk Selesai
+                        {% else %}
+                            Menunggu Pembayaran
+                        {% endif %}
+                    {% endif %}
                 </button>
             </div>
         </div>

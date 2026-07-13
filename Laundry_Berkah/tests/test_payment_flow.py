@@ -124,6 +124,61 @@ def test_update_status_to_next_workflow():
         assert transaksi_next is None
 
 
+def test_update_status_to_next_after_full_payment():
+    os.environ['FLASK_ENV'] = 'testing'
+    os.environ.pop('USE_SQLITE_FALLBACK', None)
+    sys.path.insert(0, os.getcwd())
+
+    import app as app_module
+    app_module = importlib.reload(app_module)
+    app = app_module.create_app('testing')
+
+    with app.app_context():
+        from app.models import Pelanggan, Layanan, db
+        from app.pembayaran.services import PembayaranService
+        from app.transaksi.services import TransaksiService
+
+        pelanggan = Pelanggan(nama='Test Full Payment', telepon='0815', alamat='Y', status=True)
+        db.session.add(pelanggan)
+        db.session.flush()
+
+        layanan = Layanan(
+            nama='Cuci Express',
+            harga=20000,
+            durasi=4,
+            durasi_unit='jam',
+            kategori='Reguler',
+            is_active=True,
+        )
+        db.session.add(layanan)
+        db.session.flush()
+
+        transaksi = TransaksiService.create_transaksi(
+            id_pelanggan=pelanggan.id_pelanggan,
+            items=[{'id_layanan': layanan.id_layanan, 'kuantitas': 1}],
+        )
+
+        assert transaksi is not None
+        assert transaksi.status_proses == 'Antrian'
+
+        for _ in range(5):
+            transaksi = TransaksiService.update_status_to_next(transaksi.id_transaksi)
+
+        assert transaksi.status_proses == 'Siap Ambil'
+        assert TransaksiService.update_status_to_next(transaksi.id_transaksi) is None
+
+        pembayaran = PembayaranService.create_pembayaran(
+            id_transaksi=transaksi.id_transaksi,
+            jumlah=transaksi.total_harga,
+            metode_pembayaran='Cash',
+            catatan='Bayar penuh',
+        )
+
+        assert pembayaran is not None
+        transaksi = TransaksiService.update_status_to_next(transaksi.id_transaksi)
+        assert transaksi.status_proses == 'Selesai'
+
+
 def test_create_transaction_with_parfum_and_promo_and_receipt_data():
     os.environ['FLASK_ENV'] = 'testing'
     os.environ.pop('USE_SQLITE_FALLBACK', None)

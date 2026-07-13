@@ -12,6 +12,33 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 laundry_bp = Blueprint('laundry', __name__, template_folder=str(BASE_DIR / 'templates' / 'laundry'))
 
 
+def _build_laundry_page_context(transaksi_list):
+    payment_status_map = {
+        trx.id_transaksi: PembayaranService.get_pembayaran_status(trx.id_transaksi)
+        for trx in transaksi_list
+    }
+    next_status_map = {
+        trx.id_transaksi: TransaksiService.get_next_status(trx.id_transaksi)
+        for trx in transaksi_list
+    }
+    can_advance_map = {
+        trx.id_transaksi: bool(
+            next_status_map[trx.id_transaksi] and
+            (
+                next_status_map[trx.id_transaksi] != 'Selesai' or
+                (payment_status_map[trx.id_transaksi] and payment_status_map[trx.id_transaksi].get('status') == 'Lunas')
+            )
+        )
+        for trx in transaksi_list
+    }
+    unpaid_count = sum(
+        1
+        for trx in transaksi_list
+        if not payment_status_map[trx.id_transaksi] or payment_status_map[trx.id_transaksi].get('status') != 'Lunas'
+    )
+    return payment_status_map, next_status_map, can_advance_map, unpaid_count
+
+
 @laundry_bp.route('/')
 def index():
     """Laundry process dashboard"""
@@ -39,11 +66,18 @@ def antrian():
     else:
         transaksi_list = TransaksiService.get_transaksi_by_statuses(['Antrian'], limit=50)
     
-    payment_status_map = {
-        trx.id_transaksi: PembayaranService.get_pembayaran_status(trx.id_transaksi)
-        for trx in transaksi_list
-    }
-    return render_template('antrian.html', status_counts=status_counts, transaksi_list=transaksi_list, payment_status_map=payment_status_map, search_keyword=keyword, active_page='laundry')
+    payment_status_map, next_status_map, can_advance_map, unpaid_count = _build_laundry_page_context(transaksi_list)
+    return render_template(
+        'antrian.html',
+        status_counts=status_counts,
+        transaksi_list=transaksi_list,
+        payment_status_map=payment_status_map,
+        next_status_map=next_status_map,
+        can_advance_map=can_advance_map,
+        unpaid_count=unpaid_count,
+        search_keyword=keyword,
+        active_page='laundry'
+    )
 
 
 @laundry_bp.route('/proses')
@@ -64,11 +98,18 @@ def proses():
     else:
         transaksi_list = TransaksiService.get_transaksi_by_statuses(['Cuci', 'Pengeringan', 'Setrika', 'Packing'], limit=50)
     
-    payment_status_map = {
-        trx.id_transaksi: PembayaranService.get_pembayaran_status(trx.id_transaksi)
-        for trx in transaksi_list
-    }
-    return render_template('proses.html', status_counts=status_counts, transaksi_list=transaksi_list, payment_status_map=payment_status_map, search_keyword=keyword, active_page='laundry')
+    payment_status_map, next_status_map, can_advance_map, unpaid_count = _build_laundry_page_context(transaksi_list)
+    return render_template(
+        'proses.html',
+        status_counts=status_counts,
+        transaksi_list=transaksi_list,
+        payment_status_map=payment_status_map,
+        next_status_map=next_status_map,
+        can_advance_map=can_advance_map,
+        unpaid_count=unpaid_count,
+        search_keyword=keyword,
+        active_page='laundry'
+    )
 
 
 @laundry_bp.route('/siap_ambil')
@@ -89,11 +130,18 @@ def siap_ambil():
     else:
         transaksi_list = TransaksiService.get_transaksi_by_statuses(['Siap Ambil'], limit=50)
     
-    payment_status_map = {
-        trx.id_transaksi: PembayaranService.get_pembayaran_status(trx.id_transaksi)
-        for trx in transaksi_list
-    }
-    return render_template('siap_ambil.html', status_counts=status_counts, transaksi_list=transaksi_list, payment_status_map=payment_status_map, search_keyword=keyword, active_page='laundry')
+    payment_status_map, next_status_map, can_advance_map, unpaid_count = _build_laundry_page_context(transaksi_list)
+    return render_template(
+        'siap_ambil.html',
+        status_counts=status_counts,
+        transaksi_list=transaksi_list,
+        payment_status_map=payment_status_map,
+        next_status_map=next_status_map,
+        can_advance_map=can_advance_map,
+        unpaid_count=unpaid_count,
+        search_keyword=keyword,
+        active_page='laundry'
+    )
 
 
 @laundry_bp.route('/selesai')
@@ -114,8 +162,15 @@ def selesai():
     else:
         transaksi_list = TransaksiService.get_transaksi_by_statuses(['Selesai'], limit=50)
     
-    payment_status_map = {
-        trx.id_transaksi: PembayaranService.get_pembayaran_status(trx.id_transaksi)
-        for trx in transaksi_list
-    }
-    return render_template('selesai.html', status_counts=status_counts, transaksi_list=transaksi_list, payment_status_map=payment_status_map, search_keyword=keyword, active_page='laundry')
+    payment_status_map, next_status_map, can_advance_map, unpaid_count = _build_laundry_page_context(transaksi_list)
+    return render_template(
+        'selesai.html',
+        status_counts=status_counts,
+        transaksi_list=transaksi_list,
+        payment_status_map=payment_status_map,
+        next_status_map=next_status_map,
+        can_advance_map=can_advance_map,
+        unpaid_count=unpaid_count,
+        search_keyword=keyword,
+        active_page='laundry'
+    )

@@ -36,7 +36,9 @@ function advanceLaundryStatus(id_transaksi, button) {
                 location.reload();
             }, 1500);
         } else {
-            showNotification(data.error || 'Gagal mengupdate status', 'danger');
+            const message = data.error || 'Gagal mengupdate status';
+            const type = message.toLowerCase().includes('pembayaran belum lunas') ? 'warning' : 'danger';
+            showNotification(message, type);
             button.disabled = false;
             button.innerHTML = originalContent;
         }

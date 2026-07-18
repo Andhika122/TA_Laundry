@@ -60,6 +60,12 @@
         Hasil pencarian untuk: <strong>{{ search_keyword }}</strong> ({{ transaksi_list|length }} transaksi ditemukan)
     </div>
     {% endif %}
+
+    {% if unpaid_count > 0 %}
+    <div class="alert alert-info" role="alert">
+        <strong>Info:</strong> Terdapat {{ unpaid_count }} transaksi yang belum lunas di daftar ini. Perhatikan pembayaran sebelum menyelesaikan proses.
+    </div>
+    {% endif %}
 </div>
 
 <div class="section-card">
@@ -80,8 +86,18 @@
             </div>
             <div class="actions">
                 <a href="{{ url_for('transaksi.detail', id_transaksi=transaksi.id_transaksi) }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-eye"></i> Detail</a>
-                <button type="button" class="btn btn-primary btn-sm" onclick="advanceLaundryStatus({{ transaksi.id_transaksi }}, this)">
-                    <i class="fas fa-arrow-right"></i> Proses
+                {% set next_status = next_status_map[transaksi.id_transaksi] %}
+                <button type="button" class="btn btn-primary btn-sm" onclick="advanceLaundryStatus({{ transaksi.id_transaksi }}, this)" {% if not can_advance_map[transaksi.id_transaksi] %}disabled{% endif %}>
+                    <i class="fas fa-arrow-right"></i>
+                    {% if can_advance_map[transaksi.id_transaksi] %}
+                        Lanjut ke {{ next_status or 'Proses' }}
+                    {% else %}
+                        {% if next_status == 'Selesai' %}
+                            Bayar dulu untuk Selesai
+                        {% else %}
+                            Menunggu Pembayaran
+                        {% endif %}
+                    {% endif %}
                 </button>
             </div>
         </div>

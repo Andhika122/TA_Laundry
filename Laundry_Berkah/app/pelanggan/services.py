@@ -27,7 +27,6 @@ class PelangganService:
 
     @staticmethod
     def _has_duplicate_pelanggan(nama, telepon, exclude_id=None):
-        normalized_nama = PelangganService._normalize_text(nama)
         normalized_telepon = PelangganService._normalize_telepon(telepon)
         query = Pelanggan.query.filter(Pelanggan.status == True)
         if exclude_id is not None:
@@ -35,8 +34,6 @@ class PelangganService:
 
         for pelanggan in query.all():
             if normalized_telepon and PelangganService._normalize_telepon(pelanggan.telepon) == normalized_telepon:
-                return True
-            if normalized_nama and PelangganService._normalize_text(pelanggan.nama) == normalized_nama:
                 return True
         return False
     

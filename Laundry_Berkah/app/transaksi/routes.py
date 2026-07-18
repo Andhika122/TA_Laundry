@@ -8,7 +8,7 @@ from app.transaksi.services import TransaksiService
 from app.layanan.services import LayananService
 from app.pelanggan.services import PelangganService
 from app.pembayaran.services import PembayaranService
-from app.models import Layanan, Pelanggan, Promo, Parfum, db
+from app.models import Layanan, Pelanggan, Promo, Parfum, Transaksi, db
 from app.utils.whatsapp import build_whatsapp_chat_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -489,13 +489,22 @@ def api_update_status_next(id_transaksi):
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
 
-    transaksi = TransaksiService.update_status_to_next(id_transaksi)
+    from app.pembayaran.services import PembayaranService
 
+    transaksi = db.session.get(Transaksi, id_transaksi)
     if not transaksi:
-        return jsonify({'error': 'Gagal mengupdate status atau transaksi tidak ditemukan / pembayaran belum lunas'}), 400
+        return jsonify({'error': 'Transaksi tidak ditemukan'}), 404
+
+    next_status = TransaksiService.get_next_status(id_transaksi)
+    if next_status == 'Selesai' and not PembayaranService.is_transaksi_paid(id_transaksi):
+        return jsonify({'error': 'Pembayaran belum lunas. Silakan selesaikan pembayaran terlebih dahulu.'}), 400
+
+    updated_transaksi = TransaksiService.update_status_to_next(id_transaksi)
+    if not updated_transaksi:
+        return jsonify({'error': 'Gagal mengupdate status transaksi'}), 400
 
     return jsonify({
         'success': True,
-        'message': f'Status berhasil diupdate menjadi {transaksi.status_proses}',
-        'status_proses': transaksi.status_proses
+        'message': f'Status berhasil diupdate menjadi {updated_transaksi.status_proses}',
+        'status_proses': updated_transaksi.status_proses
     })

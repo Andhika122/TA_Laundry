@@ -80,8 +80,8 @@
             </div>
             <div class="actions">
                 <a href="{{ url_for('transaksi.detail', id_transaksi=transaksi.id_transaksi) }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-eye"></i> Detail</a>
-                <button type="button" class="btn btn-primary btn-sm" onclick="advanceLaundryStatus({{ transaksi.id_transaksi }}, this)">
-                    <i class="fas fa-arrow-right"></i> Proses
+                <button type="button" class="btn btn-primary btn-sm" onclick="advanceLaundryStatus({{ transaksi.id_transaksi }}, this)" disabled>
+                    <i class="fas fa-arrow-right"></i> Selesai
                 </button>
             </div>
         </div>

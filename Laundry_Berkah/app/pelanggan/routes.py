@@ -208,6 +208,38 @@ def delete(id_pelanggan):
     return redirect(url_for('pelanggan.index'))
 
 
+@pelanggan_bp.route('/toggle/<int:id_pelanggan>', methods=['POST'])
+def toggle_status(id_pelanggan):
+    """Toggle pelanggan active/inactive status via AJAX POST"""
+    if login_required():
+        return login_required()
+
+    access = require_role('Admin', 'Operator')
+    if access:
+        return access
+
+    # Accept form or JSON
+    status = None
+    if request.is_json:
+        data = request.get_json()
+        status = data.get('status')
+    else:
+        status = request.form.get('status')
+
+    # Normalize to boolean
+    status_bool = False
+    if isinstance(status, bool):
+        status_bool = status
+    elif isinstance(status, str):
+        status_bool = status.lower() in ('1', 'true', 'yes', 'on')
+
+    result = PelangganService.set_status(id_pelanggan, status_bool)
+
+    if result:
+        return jsonify({'success': True, 'status': status_bool})
+    return jsonify({'success': False}), 400
+
+
 @pelanggan_bp.route('/api/search')
 def api_search():
     """API endpoint untuk search pelanggan (untuk autocomplete)"""

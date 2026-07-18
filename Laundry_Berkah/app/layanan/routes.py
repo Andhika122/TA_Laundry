@@ -209,6 +209,25 @@ def delete(id_layanan):
     return redirect(url_for('layanan.index'))
 
 
+@layanan_bp.route('/toggle/<int:id_layanan>', methods=['POST'])
+def toggle_status(id_layanan):
+    """Toggle layanan active/inactive status via AJAX POST"""
+    if login_required():
+        return login_required()
+
+    access = require_role('Admin', 'Operator')
+    if access:
+        return access
+
+    # We can use the service helper to toggle status
+    result = LayananService.toggle_layanan_status(id_layanan)
+
+    if result:
+        layanan = LayananService.get_layanan_by_id(id_layanan)
+        return jsonify({'success': True, 'status': getattr(layanan, 'is_active', False)})
+    return jsonify({'success': False}), 400
+
+
 @layanan_bp.route('/api/search')
 def api_search():
     """API endpoint untuk search layanan (untuk autocomplete)"""

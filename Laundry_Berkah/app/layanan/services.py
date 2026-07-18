@@ -81,7 +81,8 @@ class LayananService:
         Returns: tuple (layanan_list, total_count, pages)
         """
         try:
-            query = Layanan.query.filter_by(is_active=True)
+            # Include both active and inactive layanan so admin can toggle status
+            query = Layanan.query
             
             # Filter berdasarkan kategori
             if kategori:

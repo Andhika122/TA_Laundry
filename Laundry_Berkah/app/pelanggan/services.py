@@ -86,7 +86,8 @@ class PelangganService:
         Returns: tuple (pelanggan_list, total_count, pages)
         """
         try:
-            query = Pelanggan.query.filter_by(status=True)
+            # Include both active and inactive pelanggan so admin can toggle status
+            query = Pelanggan.query
             
             # Filter berdasarkan search
             if search:
@@ -167,6 +168,25 @@ class PelangganService:
         except Exception as e:
             print(f"Error in get_pelanggan_by_telepon: {str(e)}")
             return None
+
+    @staticmethod
+    def set_status(id_pelanggan, status_value: bool):
+        """
+        Set status (active/inactive) for a pelanggan
+        Returns: bool
+        """
+        try:
+            pelanggan = db.session.get(Pelanggan, id_pelanggan)
+            if not pelanggan:
+                return False
+
+            pelanggan.status = bool(status_value)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error in set_status: {str(e)}")
+            return False
     
     @staticmethod
     def search_pelanggan(keyword, limit=10):

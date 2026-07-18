@@ -89,6 +89,7 @@
                                 <th>Harga</th>
                                 <th>Durasi</th>
                                 <th>Deskripsi</th>
+                                <th>Status</th>
                                 <th>Aksi</th>
                             </tr>
                         </thead>
@@ -102,15 +103,26 @@
                                     <td>{{ l.durasi }} {{ l.durasi_unit }}</td>
                                     <td>{{ l.deskripsi[:50] if l.deskripsi else '' }}{% if l.deskripsi and l.deskripsi|length > 50 %}...{% endif %}</td>
                                     <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="form-check form-switch me-2">
+                                                <input class="form-check-input layanan-toggle" type="checkbox" id="toggle-layanan-{{ l.id_layanan }}" {% if l.is_active %}checked{% endif %} onchange="toggleLayananStatus({{ l.id_layanan }}, this)">
+                                            </div>
+                                            <div>
+                                                {% if l.is_active %}
+                                                    <span class="badge bg-success">Aktif</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Tidak Aktif</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <a href="{{ url_for('layanan.detail', id_layanan=l.id_layanan) }}" class="btn btn-sm btn-outline-info" title="Lihat">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                         <a href="{{ url_for('layanan.edit', id_layanan=l.id_layanan) }}" class="btn btn-sm btn-outline-warning" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete({{ l.id_layanan }})" title="Hapus">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -165,6 +177,35 @@
             form.method = 'POST';
             form.submit();
         }
+    }
+
+    function toggleLayananStatus(id, checkbox) {
+        const url = "{{ url_for('layanan.toggle_status', id_layanan=0) }}".replace('/0', '/' + id);
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin'
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            if (data && data.success) {
+                const badge = document.querySelector('#toggle-layanan-' + id).closest('tr').querySelector('.badge');
+                if (badge) {
+                    const status = data.status;
+                    badge.textContent = status ? 'Aktif' : 'Tidak Aktif';
+                    badge.className = status ? 'badge bg-success' : 'badge bg-danger';
+                    document.getElementById('toggle-layanan-' + id).checked = status;
+                }
+            } else {
+                checkbox.checked = !checkbox.checked;
+                alert('Gagal mengubah status layanan');
+            }
+        })
+        .catch(() => {
+            checkbox.checked = !checkbox.checked;
+            alert('Terjadi kesalahan jaringan');
+        });
     }
 </script>
 {% endblock %}

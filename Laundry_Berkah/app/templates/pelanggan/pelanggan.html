@@ -60,6 +60,7 @@
                                 <th>Telepon</th>
                                 <th>Email</th>
                                 <th>Alamat</th>
+                                <th>Status</th>
                                 <th>Aksi</th>
                             </tr>
                         </thead>
@@ -71,6 +72,20 @@
                                 <td>{{ p.telepon }}</td>
                                 <td>{{ p.email }}</td>
                                 <td>{{ p.alamat }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch me-2">
+                                            <input class="form-check-input pelanggan-toggle" type="checkbox" id="toggle-{{ p.id_pelanggan }}" {% if p.status %}checked{% endif %} onchange="toggleStatus({{ p.id_pelanggan }}, this)">
+                                        </div>
+                                        <div>
+                                            {% if p.status %}
+                                                <span class="badge bg-success">Aktif</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Tidak Aktif</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
                                 <td>
                                     <a href="{{ url_for('pelanggan.detail', id_pelanggan=p.id_pelanggan) }}" class="btn btn-sm btn-outline-info" title="Lihat">
                                         <i class="fas fa-eye"></i>
@@ -84,9 +99,6 @@
                                     <a href="{{ url_for('pelanggan.edit', id_pelanggan=p.id_pelanggan) }}" class="btn btn-sm btn-outline-warning ms-1" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <button class="btn btn-sm btn-outline-danger ms-1" onclick="confirmDelete({{ p.id_pelanggan }})" title="Hapus">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -135,16 +147,39 @@
 {% endblock %}
 {% block scripts %}
     <script>
-        function confirmDelete(id) {
-            if (confirm('Apakah Anda yakin ingin menghapus pelanggan ini?')) {
-                const form = document.getElementById('deleteForm');
-                form.action = "{{ url_for('pelanggan.delete', id_pelanggan=0) }}".replace('/0', '/' + id);
-                form.method = 'POST';
-                form.submit();
-            }
+        function toggleStatus(id, checkbox) {
+            const url = "{{ url_for('pelanggan.toggle_status', id_pelanggan=0) }}".replace('/0', '/' + id);
+            const status = checkbox.checked;
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ status: status })
+            })
+            .then(resp => resp.json())
+            .then(data => {
+                if (data && data.success) {
+                    const badge = document.querySelector('#toggle-' + id).closest('tr').querySelector('.badge');
+                    if (badge) {
+                        badge.textContent = status ? 'Aktif' : 'Tidak Aktif';
+                        badge.className = status ? 'badge bg-success' : 'badge bg-danger';
+                    }
+                } else {
+                    // revert checkbox on failure
+                    checkbox.checked = !status;
+                    alert('Gagal mengubah status pelanggan');
+                }
+            })
+            .catch(() => {
+                checkbox.checked = !status;
+                alert('Terjadi kesalahan jaringan');
+            });
         }
     </script>
-    <form id="deleteForm" method="POST" style="display: none;"></form>
+    
 {% endblock %}
 {% block styles %}
     <style>

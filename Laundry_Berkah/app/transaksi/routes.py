@@ -307,9 +307,9 @@ def detail(id_transaksi):
     )
 
 
-@transaksi_bp.route('/cancel/<int:id_transaksi>', methods=['POST'])
-def cancel(id_transaksi):
-    """Cancel a transaction if permitted by the current role."""
+@transaksi_bp.route('/toggle-active/<int:id_transaksi>', methods=['POST'])
+def toggle_active(id_transaksi):
+    """Toggle a transaction between active and inactive state."""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
 
@@ -320,17 +320,19 @@ def cancel(id_transaksi):
 
     role = session.get('role')
     if not TransaksiService.can_cancel_transaksi(role, id_transaksi):
-        flash('Anda tidak memiliki izin untuk membatalkan transaksi yang sudah dibayar lunas.', 'warning')
+        flash('Anda tidak memiliki izin untuk mengubah status aktif transaksi.', 'warning')
         return redirect(url_for('transaksi.detail', id_transaksi=id_transaksi))
 
-    if TransaksiService.cancel_transaksi(id_transaksi):
-        current_app.logger.info('Transaksi %s berhasil dibatalkan oleh user_id %s role %s', id_transaksi, session.get('user_id'), role)
-        flash('Transaksi berhasil dibatalkan.', 'success')
+    updated_transaksi = TransaksiService.toggle_active_transaksi(id_transaksi)
+    if updated_transaksi:
+        state_label = 'diaktifkan' if updated_transaksi.is_active else 'dinonaktifkan'
+        current_app.logger.info('Transaksi %s berhasil %s oleh user_id %s role %s', id_transaksi, state_label, session.get('user_id'), role)
+        flash(f'Transaksi berhasil {state_label}.', 'success')
     else:
-        current_app.logger.error('Gagal membatalkan transaksi %s oleh user_id %s role %s', id_transaksi, session.get('user_id'), role)
-        flash('Gagal membatalkan transaksi. Silakan coba lagi.', 'danger')
+        current_app.logger.error('Gagal mengubah status aktif transaksi %s oleh user_id %s role %s', id_transaksi, session.get('user_id'), role)
+        flash('Gagal mengubah status transaksi. Silakan coba lagi.', 'danger')
 
-    return redirect(url_for('transaksi.index'))
+    return redirect(url_for('transaksi.detail', id_transaksi=id_transaksi))
 
 
 

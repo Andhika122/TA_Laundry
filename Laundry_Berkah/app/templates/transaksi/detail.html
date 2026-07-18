@@ -76,7 +76,119 @@
 .table { font-size: 13px; margin-bottom: 0; }
 .table thead th { border-bottom: 2px solid #e2e8f0; font-weight: 600; color: #475569; padding: 10px; }
 .table tbody td { padding: 10px; color: #475569; }
-</style>
+
+    .toggle-switch-wrapper {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        cursor: pointer;
+        color: white;
+        padding: 10px 12px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.08);
+        transition: background-color 0.25s ease, transform 0.25s ease;
+        position: relative;
+    }
+    .toggle-switch-wrapper:hover {
+        background: rgba(255,255,255,0.14);
+    }
+    .toggle-switch-wrapper.toggle-animating {
+        opacity: 0.95;
+    }
+    .toggle-switch-wrapper.active {
+        background: rgba(22, 163, 74, 0.18);
+    }
+    .toggle-switch-wrapper:not(.active) {
+        background: rgba(239, 68, 68, 0.16);
+    }
+    .toggle-switch-wrapper.active .state-text {
+        color: #dcfce7;
+    }
+    .toggle-switch-wrapper:not(.active) .state-text {
+        color: #fee2e2;
+    }
+    .toggle-switch-label {
+        display: flex;
+        flex-direction: column;
+        font-weight: 700;
+        font-size: 14px;
+        line-height: 1.2;
+    }
+    .toggle-switch-label small {
+        font-size: 12px;
+        color: rgba(255,255,255,0.84);
+        font-weight: 400;
+    }
+    .state-text {
+        font-size: 15px;
+        line-height: 1.1;
+    }
+    .form-switch-text {
+        margin: 0;
+    }
+    .toggle-switch-wrapper input {
+        position: absolute;
+        opacity: 0;
+        inset: 0;
+        margin: 0;
+        cursor: pointer;
+        z-index: 2;
+    }
+    .toggle-switch {
+        position: relative;
+        width: 56px;
+        height: 30px;
+        border-radius: 999px;
+        background: #ef4444;
+        transition: background-color 0.25s ease;
+        flex-shrink: 0;
+        pointer-events: none;
+    }
+    .toggle-switch-thumb {
+        position: absolute;
+        top: 3px;
+        right: 3px;
+        width: 24px;
+        height: 24px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16);
+        transition: left 0.25s ease, right 0.25s ease, background-color 0.25s ease;
+    }
+    .toggle-switch input:not(:checked) + .toggle-switch {
+        background: #ef4444;
+    }
+    .toggle-switch input:not(:checked) + .toggle-switch .toggle-switch-thumb {
+        right: 3px;
+        left: auto;
+    }
+    .toggle-switch input:checked + .toggle-switch {
+        background: #16a34a;
+    }
+    .toggle-switch input:checked + .toggle-switch .toggle-switch-thumb {
+        left: 3px;
+        right: auto;
+    }
+    .toggle-switch-label {
+        display: flex;
+        flex-direction: column;
+        font-weight: 700;
+        font-size: 14px;
+        line-height: 1.2;
+    }
+    .toggle-switch-label small {
+        font-size: 12px;
+        color: rgba(255,255,255,0.84);
+        font-weight: 400;
+    }
+    .state-text {
+        font-size: 15px;
+        line-height: 1.1;
+    }
+    .form-switch-text {
+        margin: 0;
+    }</style>
 {% endblock %}
 {% block content %}
 <!-- Alerts -->
@@ -309,16 +421,20 @@
                 </div>
                 <div class="col-md-6">
                     {% if can_cancel %}
-                    <form method="POST" action="{{ url_for('transaksi.cancel', id_transaksi=transaksi.id_transaksi) }}" onsubmit="return confirm('Yakin ingin membatalkan transaksi ini?');">
-                        <button type="submit" class="btn btn-danger w-100">
-                            <i class="fas fa-trash-alt"></i> Batalkan Transaksi
-                        </button>
+                    <form id="toggleActiveForm" method="POST" action="{{ url_for('transaksi.toggle_active', id_transaksi=transaksi.id_transaksi) }}" class="form-switch-text">
+                        <label class="toggle-switch-wrapper {% if transaksi.is_active %}active{% endif %}" for="activeToggle">
+                            <input type="checkbox" id="activeToggle" name="is_active" value="1" {% if transaksi.is_active %}checked{% endif %} onchange="submitToggleForm()">
+                            <span class="toggle-switch">
+                                <span class="toggle-switch-thumb"></span>
+                            </span>
+                            <span class="toggle-switch-label">
+                                <span class="state-text">{% if transaksi.is_active %}Aktif{% else %}Nonaktif{% endif %}</span>
+                                <small>{% if transaksi.is_active %}Klik untuk nonaktifkan transaksi{% else %}Klik untuk aktifkan transaksi{% endif %}</small>
+                            </span>
+                        </label>
                     </form>
-                    {% elif role == 'Kasir' %}
-                    <button type="button" class="btn btn-danger w-100" disabled>
-                        <i class="fas fa-trash-alt"></i> Kasir tidak dapat membatalkan transaksi
-                    </button>
                     {% endif %}
+                </div>
                 </div>
             </div>
             {% if payment_status and payment_status.status != 'Lunas' %}
@@ -392,6 +508,16 @@ function updateStatusNext() {
         updateBtn.innerHTML = '<i class="fas fa-forward"></i> {% if next_status == 'Selesai' %}Selesaikan Transaksi{% else %}Lanjut ke {{ next_status }}{% endif %}';
         alert('Error: ' + error);
     });
+}
+
+function submitToggleForm() {
+    const form = document.getElementById('toggleActiveForm');
+    const checkbox = document.getElementById('activeToggle');
+    checkbox.disabled = true;
+    form.classList.add('toggle-animating');
+    setTimeout(() => {
+        form.submit();
+    }, 220);
 }
 </script>
 {% endblock %}

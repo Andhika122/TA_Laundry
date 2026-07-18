@@ -23,6 +23,17 @@ config_name = os.getenv('FLASK_ENV', 'development')
 app = create_app(config_name)
 
 
+def get_run_config():
+    """Return the host and port that should be used for local startup."""
+    host = os.getenv('HOST') or os.getenv('FLASK_RUN_HOST') or '0.0.0.0'
+    port_value = os.getenv('PORT') or os.getenv('FLASK_RUN_PORT') or '5000'
+    try:
+        port = int(port_value)
+    except (TypeError, ValueError):
+        port = 5000
+    return host, port
+
+
 def describe_database(uri):
     """Return a safe database label for startup logs."""
     parsed = urlparse(uri)
@@ -79,10 +90,16 @@ def after_request(response):
 
 
 if __name__ == '__main__':
+    host, port = get_run_config()
     print("\n" + "="*60)
     print("  [APP] Laundry Berkah Application")
     print(f"  [ENV] Environment: {config_name}")
     print(f"  [DB] Database: {describe_database(app.config['SQLALCHEMY_DATABASE_URI'])}")
+    print(f"  [URL] http://127.0.0.1:{port}")
+    if host == '0.0.0.0':
+        print(f"  [URL] http://<your-lan-ip>:{port} (from other devices on the same network)")
+    else:
+        print(f"  [URL] http://{host}:{port}")
     print("="*60 + "\n")
     
     # Create upload folder if it doesn't exist
@@ -91,8 +108,8 @@ if __name__ == '__main__':
     try:
         print("[OK] Starting Flask application...")
         app.run(
-            host='0.0.0.0',
-            port=5000,
+            host=host,
+            port=port,
             debug=app.config['DEBUG']
         )
     except Exception as e:

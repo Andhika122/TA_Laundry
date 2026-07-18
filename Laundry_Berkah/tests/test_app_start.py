@@ -128,6 +128,16 @@ def test_ssl_ca_path_resolves_from_project_root(monkeypatch):
     assert os.path.exists(options["connect_args"]["ssl_ca"])
 
 
+def test_get_run_config_uses_environment_override(monkeypatch):
+    monkeypatch.setenv("HOST", "127.0.0.1")
+    monkeypatch.setenv("PORT", "7000")
+
+    import app as app_module
+    app_module = importlib.reload(app_module)
+
+    assert app_module.get_run_config() == ("127.0.0.1", 7000)
+
+
 def test_login_page_is_accessible(client):
     response = client.get("/auth/login")
 

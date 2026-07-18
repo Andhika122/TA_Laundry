@@ -393,6 +393,22 @@ class TransaksiService:
         return role in ('Admin', 'Operator')
 
     @staticmethod
+    def toggle_active_transaksi(id_transaksi):
+        """Toggle the active state of a transaction."""
+        try:
+            transaksi = db.session.get(Transaksi, id_transaksi)
+            if not transaksi:
+                return None
+
+            transaksi.is_active = not transaksi.is_active
+            db.session.commit()
+            return transaksi
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error in toggle_active_transaksi: {str(e)}")
+            return None
+
+    @staticmethod
     def update_transaksi(id_transaksi, id_pelanggan, items, promo_id=None, catatan=''):
         """Update existing transaction data and its detail items."""
         try:
